@@ -8,7 +8,9 @@
     "db:migrate:local": "wrangler d1 execute appli-pressing-db --local --file=./schema.sql",
     "db:seed:local": "wrangler d1 execute appli-pressing-db --local --file=./seed.sql",
     "db:migrate:remote": "wrangler d1 execute appli-pressing-db --remote --file=./schema.sql",
-    "db:seed:remote": "wrangler d1 execute appli-pressing-db --remote --file=./seed.sql"
+    "db:seed:remote": "wrangler d1 execute appli-pressing-db --remote --file=./seed.sql",
+    "db:migrate:horaires:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/002_horaires_ouverture.sql",
+    "db:migrate:horaires:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/002_horaires_ouverture.sql"
   },
   "devDependencies": {
     "wrangler": "^3.90.0"

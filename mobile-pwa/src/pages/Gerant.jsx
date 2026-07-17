@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { api, normaliserPressing, formaterCreneau } from '../api.js'
+import { api, normaliserPressing, formaterCreneau, formaterJoursOuverts } from '../api.js'
 
 export default function Gerant() {
   const { pressings } = useApp()
@@ -49,21 +49,28 @@ export default function Gerant() {
         )
       })}
 
+      <h2>Horaires d'ouverture</h2>
+      <div className="card">
+        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Jours ouverts</span><span>{formaterJoursOuverts(pressing.joursOuverts)}</span></div>
+        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Horaires</span><span>{pressing.heureOuverture}–{pressing.heureFermeture}</span></div>
+      </div>
+
       <h2>Règles</h2>
       <div className="card">
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Acompte</span><span>{pressing.acomptePourcent}% du total</span></div>
-        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Délai standard</span><span>{pressing.delaiStandardH} h</span></div>
-        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Délai express</span><span>{pressing.delaiExpressH} h</span></div>
+        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Délai standard</span><span>{pressing.delaiStandardJoursOuvres} jour{pressing.delaiStandardJoursOuvres > 1 ? 's' : ''} ouvré{pressing.delaiStandardJoursOuvres > 1 ? 's' : ''}</span></div>
+        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Délai express</span><span>{pressing.delaiExpressJoursOuvres} jour{pressing.delaiExpressJoursOuvres > 1 ? 's' : ''} ouvré{pressing.delaiExpressJoursOuvres > 1 ? 's' : ''}</span></div>
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Frais de garde</span><span>{pressing.fraisGarde.montantParJour.toFixed(2)} EUR/jour après {pressing.fraisGarde.delaiGlobalJours} j</span></div>
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Rayon de collecte</span><span>{pressing.rayonCollecteKm} km</span></div>
       </div>
 
-      <h2>Créneaux de dépôt</h2>
-      {pressing.creneauxDepot.map((c) => (
+      <h2>Créneaux de collecte à domicile</h2>
+      {pressing.creneauxCollecteDomicile.length === 0 && <p className="sous-titre">Aucun créneau défini.</p>}
+      {pressing.creneauxCollecteDomicile.map((c) => (
         <div key={c.id} className="card">{formaterCreneau(c)}</div>
       ))}
 
-      <h2>Créneaux de retrait</h2>
+      <h2>Créneaux de retrait (révision manuelle)</h2>
       {pressing.creneauxRetrait.map((c) => (
         <div key={c.id} className="card">{formaterCreneau(c)}</div>
       ))}

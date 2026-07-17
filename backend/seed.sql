@@ -9,9 +9,9 @@ INSERT INTO users (id, email, telephone, mot_de_passe_hash, nom, prenom) VALUES
 INSERT INTO clients (id, user_id, adresse_principale) VALUES
   ('c-1', 'u-client1', '12 rue des Lilas');
 
-INSERT INTO pressings (id, proprietaire_id, nom, adresse, rayon_collecte_km, acompte_pourcent, delai_standard_h, delai_express_h, frais_garde_delai_jours, frais_garde_montant_jour) VALUES
-  ('p1', 'u-owner', 'Pressing du Marché', '12 avenue de la République', 3, 30, 48, 24, 30, 0.5),
-  ('p2', 'u-owner', 'Clean Express', '5 rue des Lilas', 5, 40, 48, 12, 30, 0.3);
+INSERT INTO pressings (id, proprietaire_id, nom, adresse, rayon_collecte_km, acompte_pourcent, delai_standard_h, delai_express_h, delai_standard_jours_ouvres, delai_express_jours_ouvres, jours_ouverts, heure_ouverture, heure_fermeture, frais_garde_delai_jours, frais_garde_montant_jour) VALUES
+  ('p1', 'u-owner', 'Pressing du Marché', '12 avenue de la République', 3, 30, 48, 24, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.5),
+  ('p2', 'u-owner', 'Clean Express', '5 rue des Lilas', 5, 40, 48, 12, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.3);
 
 INSERT INTO pressing_staff (id, pressing_id, user_id, role, poste) VALUES
   ('ps-1', 'p1', 'u-gerant1', 'gerant', NULL);
@@ -61,9 +61,11 @@ INSERT INTO etapes_circuit (id, circuit_id, ordre, libelle, poste_associe) VALUE
   ('e-16', 'cir-p1-repassage', 2, 'Contrôle qualité', 'controle'),
   ('e-17', 'cir-p1-repassage', 3, 'Empaquetage', 'controle');
 
+-- Le dépôt/retrait au comptoir n'utilise plus de créneau : le client vient pendant les horaires
+-- d'ouverture (jours_ouverts/heure_ouverture/heure_fermeture du pressing). Les créneaux restants
+-- servent uniquement à la collecte à domicile (logistique réelle) et à la révision manuelle du
+-- retrait par le personnel (Employe.jsx).
 INSERT INTO creneaux (id, pressing_id, type, jour_ou_date, heure_debut, heure_fin, mode) VALUES
-  ('cd-1', 'p1', 'depot', 'aujourd''hui', '14:00', '16:00', 'comptoir'),
-  ('cd-2', 'p1', 'depot', 'aujourd''hui', '16:00', '18:00', 'comptoir'),
   ('cd-3', 'p1', 'depot', 'demain', '09:00', '11:00', 'domicile'),
   ('cr-1', 'p1', 'retrait', 'apres-demain', '14:00', '16:00', 'comptoir'),
   ('cr-2', 'p1', 'retrait', 'apres-demain', '16:00', '18:00', 'comptoir');

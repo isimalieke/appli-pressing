@@ -24,6 +24,24 @@ function uid(prefixe) {
   return `${prefixe}-${crypto.randomUUID()}`
 }
 
+// Ajoute `nbJours` jours ouvrés à `dateDepart`, en ne comptant que les jours listés dans
+// `joursOuvertsStr` (ISO : 1=lundi ... 7=dimanche). Conserve l'heure de dateDepart.
+// Le dépôt n'ayant lieu que pendant les horaires d'ouverture (contrainte imposée au dépôt),
+// le décompte démarre toujours immédiatement, sans report au jour ouvré suivant.
+function ajouterJoursOuvres(dateDepart, nbJours, joursOuvertsStr) {
+  const joursOuverts = new Set(
+    (joursOuvertsStr || '1,2,3,4,5,6').split(',').map((j) => Number(j.trim()))
+  )
+  const date = new Date(dateDepart)
+  let restants = nbJours
+  while (restants > 0) {
+    date.setUTCDate(date.getUTCDate() + 1)
+    const jourIso = date.getUTCDay() === 0 ? 7 : date.getUTCDay() // JS: 0=dimanche -> converti en 7
+    if (joursOuverts.has(jourIso)) restants -= 1
+  }
+  return date
+}
+
 async function lireJSON(request) {
   try {
     return await request.json()
@@ -176,9 +194,12 @@ async function validerInventaire(env, commandeId) {
     }
   }
 
-  const delaiH = commande.express ? pressing.delai_express_h : pressing.delai_standard_h
-  const dateDepot = new Date().toISOString()
-  const dateRestitution = new Date(Date.now() + delaiH * 3600 * 1000).toISOString()
+  const nbJoursOuvres = commande.express
+    ? (pressing.delai_express_jours_ouvres ?? 1)
+    : (pressing.delai_standard_jours_ouvres ?? 2)
+  const dateDepotObj = new Date()
+  const dateDepot = dateDepotObj.toISOString()
+  const dateRestitution = ajouterJoursOuvres(dateDepotObj, nbJoursOuvres, pressing.jours_ouverts).toISOString()
 
   await env.DB.prepare(
     `UPDATE commandes SET numero_ticket = ?, statut = 'deposee', date_depot_effectif = ?, date_restitution_prevue = ?, updated_at = datetime('now') WHERE id = ?`

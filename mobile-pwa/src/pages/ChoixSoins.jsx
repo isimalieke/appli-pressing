@@ -52,6 +52,7 @@ export default function ChoixSoins() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
             {pressingCourant.soins.map((soin) => {
               const actif = article.soins.includes(soin.id)
+              const tarif = pressingCourant.tarifs.find((t) => t.soin_id === soin.id)
               return (
                 <label
                   key={soin.id}
@@ -74,7 +75,7 @@ export default function ChoixSoins() {
                     />
                     {soin.libelle}
                   </span>
-                  <span>{soin.prix.toFixed(2)} EUR</span>
+                  <span>{tarif ? tarif.prix.toFixed(2) : '—'} EUR</span>
                 </label>
               )
             })}

@@ -123,12 +123,32 @@ export function normaliserPressing(p) {
     acomptePourcent: p.acompte_pourcent,
     delaiStandardH: p.delai_standard_h,
     delaiExpressH: p.delai_express_h,
+    delaiStandardJoursOuvres: p.delai_standard_jours_ouvres ?? 2,
+    delaiExpressJoursOuvres: p.delai_express_jours_ouvres ?? 1,
+    joursOuverts: (p.jours_ouverts || '1,2,3,4,5,6').split(',').map((j) => Number(j.trim())),
+    heureOuverture: p.heure_ouverture || '08:00',
+    heureFermeture: p.heure_fermeture || '19:00',
     fraisGarde: { delaiGlobalJours: p.frais_garde_delai_jours, montantParJour: p.frais_garde_montant_jour },
     soins: p.soins || [],
     tarifs: p.tarifs || [],
-    creneauxDepot: (p.creneaux || []).filter((c) => c.type === 'depot'),
+    // Le dépôt/retrait au comptoir se fait pendant les horaires d'ouverture, sans créneau.
+    // Seule la collecte à domicile nécessite un créneau réservé (contrainte logistique réelle).
+    creneauxCollecteDomicile: (p.creneaux || []).filter((c) => c.type === 'depot' && c.mode === 'domicile'),
     creneauxRetrait: (p.creneaux || []).filter((c) => c.type === 'retrait'),
   }
+}
+
+const NOMS_JOURS = { 1: 'lundi', 2: 'mardi', 3: 'mercredi', 4: 'jeudi', 5: 'vendredi', 6: 'samedi', 7: 'dimanche' }
+
+// Résume les jours d'ouverture sous forme lisible ("lundi à samedi", ou une liste si non consécutifs).
+export function formaterJoursOuverts(jours) {
+  if (!jours || jours.length === 0) return ''
+  const tries = [...jours].sort((a, b) => a - b)
+  const consecutifs = tries.every((j, i) => i === 0 || j === tries[i - 1] + 1)
+  if (consecutifs && tries.length > 1) {
+    return `${NOMS_JOURS[tries[0]]} à ${NOMS_JOURS[tries[tries.length - 1]]}`
+  }
+  return tries.map((j) => NOMS_JOURS[j]).join(', ')
 }
 
 export function formaterCreneau(c) {

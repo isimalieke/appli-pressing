@@ -97,6 +97,18 @@ CREATE TABLE creneaux (
   mode TEXT NOT NULL CHECK (mode IN ('comptoir', 'domicile'))
 );
 
+-- Gabarit hebdomadaire récurrent pour la collecte à domicile (logistique de tournée).
+-- Les créneaux réels proposés au client (sur une fenêtre glissante de 7 jours) sont générés
+-- dynamiquement à partir de ce gabarit, cf. fonction creneauxDomicileDisponibles.
+CREATE TABLE gabarit_creneaux_domicile (
+  id TEXT PRIMARY KEY,
+  pressing_id TEXT NOT NULL REFERENCES pressings(id),
+  jour_semaine INTEGER NOT NULL CHECK (jour_semaine BETWEEN 1 AND 7),
+  heure_debut TEXT NOT NULL,
+  heure_fin TEXT NOT NULL,
+  capacite_max INTEGER NOT NULL DEFAULT 3
+);
+
 CREATE TABLE commandes (
   id TEXT PRIMARY KEY,
   client_id TEXT NOT NULL REFERENCES clients(id),
@@ -105,6 +117,7 @@ CREATE TABLE commandes (
   mode_depot TEXT NOT NULL CHECK (mode_depot IN ('comptoir', 'domicile')),
   mode_retrait TEXT CHECK (mode_retrait IN ('comptoir', 'domicile')),
   creneau_depot_id TEXT REFERENCES creneaux(id),
+  creneau_collecte_prevue TEXT,
   creneau_retrait_prevu_id TEXT REFERENCES creneaux(id),
   creneau_retrait_revise TEXT,
   express INTEGER NOT NULL DEFAULT 0,

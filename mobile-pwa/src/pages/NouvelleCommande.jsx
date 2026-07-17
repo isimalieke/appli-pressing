@@ -1,13 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
-import { formaterCreneau, formaterJoursOuverts } from '../api.js'
+import { api, formaterCreneauDomicile, formaterJoursOuverts } from '../api.js'
 
 export default function NouvelleCommande() {
   const { pressingCourant, dispatch } = useApp()
   const navigate = useNavigate()
   const [mode, setMode] = useState('comptoir')
-  const [creneauId, setCreneauId] = useState(null)
+  const [creneauLabel, setCreneauLabel] = useState(null)
+  const [creneauxDisponibles, setCreneauxDisponibles] = useState([])
+  const [chargementCreneaux, setChargementCreneaux] = useState(false)
+
+  useEffect(() => {
+    if (mode === 'domicile' && pressingCourant) {
+      setChargementCreneaux(true)
+      api.creneauxDomicile(pressingCourant.id)
+        .then(setCreneauxDisponibles)
+        .finally(() => setChargementCreneaux(false))
+    }
+  }, [mode, pressingCourant])
 
   if (!pressingCourant) {
     return (
@@ -18,10 +29,14 @@ export default function NouvelleCommande() {
     )
   }
 
-  // Le dépôt au comptoir n'a pas de créneau : le client vient pendant les horaires d'ouverture.
-  // Seule la collecte à domicile réserve un créneau (contrainte de tournée du livreur).
-  const creneauxCollecte = pressingCourant.creneauxCollecteDomicile
-  const peutConfirmer = mode === 'comptoir' || !!creneauId
+  const peutConfirmer = mode === 'comptoir' || !!creneauLabel
+
+  // Regroupe les créneaux par jour pour l'affichage (7 jours glissants).
+  const creneauxParJour = creneauxDisponibles.reduce((acc, c) => {
+    acc[c.date] = acc[c.date] || []
+    acc[c.date].push(c)
+    return acc
+  }, {})
 
   async function confirmer() {
     if (!peutConfirmer) return
@@ -29,7 +44,7 @@ export default function NouvelleCommande() {
       type: 'DEMARRER_COMMANDE',
       pressingId: pressingCourant.id,
       modeDepot: mode,
-      creneauDepotId: mode === 'domicile' ? creneauId : null,
+      creneauCollectePrevue: mode === 'domicile' ? creneauLabel : null,
     })
     navigate('/commande/soins')
   }
@@ -77,17 +92,36 @@ export default function NouvelleCommande() {
         </div>
       ) : (
         <>
-          <h2>Créneaux de collecte disponibles</h2>
-          {creneauxCollecte.length === 0 && (
+          <h2>Créneaux de collecte disponibles (7 prochains jours)</h2>
+          {chargementCreneaux && <p className="sous-titre">Chargement des créneaux...</p>}
+          {!chargementCreneaux && creneauxDisponibles.length === 0 && (
             <p className="sous-titre">Aucun créneau de collecte à domicile n'est disponible pour ce pressing.</p>
           )}
-          {creneauxCollecte.map((c) => (
-            <div
-              key={c.id}
-              className={`card card-selectionnable ${creneauId === c.id ? 'actif' : ''}`}
-              onClick={() => setCreneauId(c.id)}
-            >
-              {formaterCreneau(c)}
+          {Object.entries(creneauxParJour).map(([date, creneauxJour]) => (
+            <div key={date} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--texte-muted)', marginBottom: 4, textTransform: 'capitalize' }}>
+                {formaterCreneauDomicile(creneauxJour[0]).split(',')[0]}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {creneauxJour.map((c) => (
+                  <div
+                    key={c.label}
+                    className={`card card-selectionnable ${creneauLabel === c.label ? 'actif' : ''}`}
+                    style={{
+                      flex: '1 1 auto',
+                      opacity: c.disponible ? 1 : 0.4,
+                      cursor: c.disponible ? 'pointer' : 'not-allowed',
+                      padding: '8px 10px',
+                    }}
+                    onClick={() => c.disponible && setCreneauLabel(c.label)}
+                  >
+                    <div style={{ fontSize: '0.8rem' }}>{c.heure_debut}–{c.heure_fin}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--texte-muted)' }}>
+                      {c.disponible ? `${c.places_restantes} place${c.places_restantes > 1 ? 's' : ''}` : 'Complet'}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </>

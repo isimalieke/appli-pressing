@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { api, normaliserPressing, formaterCreneau, formaterJoursOuverts } from '../api.js'
+import { api, normaliserPressing, formaterCreneau, formaterCreneauDomicile, formaterJoursOuverts } from '../api.js'
 
 export default function Gerant() {
   const { pressings } = useApp()
   const [pressingId, setPressingId] = useState(null)
   const [pressing, setPressing] = useState(null)
   const [staff, setStaff] = useState([])
+  const [creneauxDomicile, setCreneauxDomicile] = useState([])
 
   useEffect(() => {
     if (!pressingId && pressings.length) setPressingId(pressings[0].id)
@@ -16,6 +17,7 @@ export default function Gerant() {
     if (!pressingId) return
     api.detailPressing(pressingId).then((d) => setPressing(normaliserPressing(d)))
     api.listerStaff(pressingId).then(setStaff)
+    api.creneauxDomicile(pressingId).then(setCreneauxDomicile)
   }, [pressingId])
 
   if (!pressing) {
@@ -64,10 +66,13 @@ export default function Gerant() {
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Rayon de collecte</span><span>{pressing.rayonCollecteKm} km</span></div>
       </div>
 
-      <h2>Créneaux de collecte à domicile</h2>
-      {pressing.creneauxCollecteDomicile.length === 0 && <p className="sous-titre">Aucun créneau défini.</p>}
-      {pressing.creneauxCollecteDomicile.map((c) => (
-        <div key={c.id} className="card">{formaterCreneau(c)}</div>
+      <h2>Créneaux de collecte à domicile (7 prochains jours, générés depuis le gabarit hebdo)</h2>
+      {creneauxDomicile.length === 0 && <p className="sous-titre">Aucun gabarit de créneaux défini pour ce pressing.</p>}
+      {creneauxDomicile.slice(0, 8).map((c) => (
+        <div key={c.label} className="card ligne-entre">
+          <span>{formaterCreneauDomicile(c)}</span>
+          <span className="badge badge-neutre">{c.disponible ? `${c.places_restantes} place${c.places_restantes > 1 ? 's' : ''}` : 'Complet'}</span>
+        </div>
       ))}
 
       <h2>Créneaux de retrait (révision manuelle)</h2>

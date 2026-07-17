@@ -54,7 +54,7 @@ export function AppProvider({ children }) {
             client_id: CLIENT_ID_DEMO,
             pressing_id: action.pressingId,
             mode_depot: action.modeDepot,
-            creneau_depot_id: action.creneauDepotId,
+            creneau_collecte_prevue: action.creneauCollectePrevue,
           })
           setCommande({
             id,

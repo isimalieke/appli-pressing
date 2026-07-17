@@ -62,13 +62,47 @@ INSERT INTO etapes_circuit (id, circuit_id, ordre, libelle, poste_associe) VALUE
   ('e-17', 'cir-p1-repassage', 3, 'Empaquetage', 'controle');
 
 -- Le dépôt/retrait au comptoir n'utilise plus de créneau : le client vient pendant les horaires
--- d'ouverture (jours_ouverts/heure_ouverture/heure_fermeture du pressing). Les créneaux restants
--- servent uniquement à la collecte à domicile (logistique réelle) et à la révision manuelle du
--- retrait par le personnel (Employe.jsx).
+-- d'ouverture (jours_ouverts/heure_ouverture/heure_fermeture du pressing). Les créneaux de
+-- collecte à domicile sont générés dynamiquement depuis gabarit_creneaux_domicile (cf. plus bas).
+-- Ceux qui restent ici servent à la révision manuelle du retrait par le personnel (Employe.jsx).
 INSERT INTO creneaux (id, pressing_id, type, jour_ou_date, heure_debut, heure_fin, mode) VALUES
-  ('cd-3', 'p1', 'depot', 'demain', '09:00', '11:00', 'domicile'),
   ('cr-1', 'p1', 'retrait', 'apres-demain', '14:00', '16:00', 'comptoir'),
   ('cr-2', 'p1', 'retrait', 'apres-demain', '16:00', '18:00', 'comptoir');
+
+-- Gabarit hebdomadaire de collecte à domicile pour p1 : 5 blocs de 2h, lundi à samedi,
+-- capacité 3 collectes par bloc. (INSERT ... VALUES explicite : D1 limite les SELECT composés
+-- à 5 termes, une génération par UNION/CROSS JOIN échoue au-delà.)
+INSERT INTO gabarit_creneaux_domicile (id, pressing_id, jour_semaine, heure_debut, heure_fin, capacite_max) VALUES
+  ('gcd-p1-1-1', 'p1', 1, '08:00', '10:00', 3),
+  ('gcd-p1-1-2', 'p1', 1, '10:00', '12:00', 3),
+  ('gcd-p1-1-3', 'p1', 1, '12:00', '14:00', 3),
+  ('gcd-p1-1-4', 'p1', 1, '14:00', '16:00', 3),
+  ('gcd-p1-1-5', 'p1', 1, '16:00', '18:00', 3),
+  ('gcd-p1-2-1', 'p1', 2, '08:00', '10:00', 3),
+  ('gcd-p1-2-2', 'p1', 2, '10:00', '12:00', 3),
+  ('gcd-p1-2-3', 'p1', 2, '12:00', '14:00', 3),
+  ('gcd-p1-2-4', 'p1', 2, '14:00', '16:00', 3),
+  ('gcd-p1-2-5', 'p1', 2, '16:00', '18:00', 3),
+  ('gcd-p1-3-1', 'p1', 3, '08:00', '10:00', 3),
+  ('gcd-p1-3-2', 'p1', 3, '10:00', '12:00', 3),
+  ('gcd-p1-3-3', 'p1', 3, '12:00', '14:00', 3),
+  ('gcd-p1-3-4', 'p1', 3, '14:00', '16:00', 3),
+  ('gcd-p1-3-5', 'p1', 3, '16:00', '18:00', 3),
+  ('gcd-p1-4-1', 'p1', 4, '08:00', '10:00', 3),
+  ('gcd-p1-4-2', 'p1', 4, '10:00', '12:00', 3),
+  ('gcd-p1-4-3', 'p1', 4, '12:00', '14:00', 3),
+  ('gcd-p1-4-4', 'p1', 4, '14:00', '16:00', 3),
+  ('gcd-p1-4-5', 'p1', 4, '16:00', '18:00', 3),
+  ('gcd-p1-5-1', 'p1', 5, '08:00', '10:00', 3),
+  ('gcd-p1-5-2', 'p1', 5, '10:00', '12:00', 3),
+  ('gcd-p1-5-3', 'p1', 5, '12:00', '14:00', 3),
+  ('gcd-p1-5-4', 'p1', 5, '14:00', '16:00', 3),
+  ('gcd-p1-5-5', 'p1', 5, '16:00', '18:00', 3),
+  ('gcd-p1-6-1', 'p1', 6, '08:00', '10:00', 3),
+  ('gcd-p1-6-2', 'p1', 6, '10:00', '12:00', 3),
+  ('gcd-p1-6-3', 'p1', 6, '12:00', '14:00', 3),
+  ('gcd-p1-6-4', 'p1', 6, '14:00', '16:00', 3),
+  ('gcd-p1-6-5', 'p1', 6, '16:00', '18:00', 3);
 
 INSERT INTO fidelite_regles (id, pressing_id, mecanique, seuil, recompense) VALUES
   ('fr-1', 'p1', 'par_prestations', 10, 'Un repassage offert');

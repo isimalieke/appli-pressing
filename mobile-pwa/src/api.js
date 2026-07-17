@@ -22,6 +22,7 @@ export const api = {
   listerPressings: () => appel('/pressings'),
   detailPressing: (id) => appel(`/pressings/${id}`),
   listerStaff: (pressingId) => appel(`/pressings/${pressingId}/staff`),
+  creneauxDomicile: (pressingId) => appel(`/pressings/${pressingId}/creneaux-domicile`),
 
   creerCommande: (payload) => appel('/commandes', { method: 'POST', body: JSON.stringify(payload) }),
   detailCommande: (id) => appel(`/commandes/${id}`),
@@ -85,6 +86,7 @@ export function normaliserCommande(c) {
     montantSolde: c.montant_solde || 0,
     dateDepotEffectif: c.date_depot_effectif,
     dateRestitutionPrevue: c.date_restitution_prevue,
+    creneauCollectePrevue: c.creneau_collecte_prevue,
     creneauRetraitRevise: c.creneau_retrait_revise,
     evaluation: c.evaluation,
     articles: (c.articles || []).map((a) => ({
@@ -132,8 +134,7 @@ export function normaliserPressing(p) {
     soins: p.soins || [],
     tarifs: p.tarifs || [],
     // Le dépôt/retrait au comptoir se fait pendant les horaires d'ouverture, sans créneau.
-    // Seule la collecte à domicile nécessite un créneau réservé (contrainte logistique réelle).
-    creneauxCollecteDomicile: (p.creneaux || []).filter((c) => c.type === 'depot' && c.mode === 'domicile'),
+    // Les créneaux de collecte à domicile sont générés dynamiquement, cf. api.creneauxDomicile().
     creneauxRetrait: (p.creneaux || []).filter((c) => c.type === 'retrait'),
   }
 }
@@ -154,4 +155,20 @@ export function formaterJoursOuverts(jours) {
 export function formaterCreneau(c) {
   if (!c) return ''
   return `${c.jour_ou_date}, ${c.heure_debut}-${c.heure_fin}`
+}
+
+const NOMS_JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+
+// Formate un créneau de collecte à domicile généré dynamiquement (date ISO + heures) en libellé
+// lisible : "aujourd'hui", "demain", ou "vendredi 20 juillet".
+export function formaterCreneauDomicile(c) {
+  if (!c) return ''
+  const aujourdhui = new Date()
+  const dateSlot = new Date(`${c.date}T00:00:00`)
+  const diffJours = Math.round((dateSlot - new Date(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate())) / 86400000)
+  let jourLabel
+  if (diffJours === 0) jourLabel = "aujourd'hui"
+  else if (diffJours === 1) jourLabel = 'demain'
+  else jourLabel = `${NOMS_JOURS_LONGS[dateSlot.getDay()]} ${dateSlot.getDate()}/${dateSlot.getMonth() + 1}`
+  return `${jourLabel}, ${c.heure_debut}-${c.heure_fin}`
 }

@@ -1,0 +1,16 @@
+{
+  "name": "appli-pressing-api",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 execute appli-pressing-db --local --file=./schema.sql",
+    "db:seed:local": "wrangler d1 execute appli-pressing-db --local --file=./seed.sql",
+    "db:migrate:remote": "wrangler d1 execute appli-pressing-db --remote --file=./schema.sql",
+    "db:seed:remote": "wrangler d1 execute appli-pressing-db --remote --file=./seed.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

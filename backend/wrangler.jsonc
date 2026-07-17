@@ -1,0 +1,12 @@
+{
+  "name": "appli-pressing-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "appli-pressing-db",
+      "database_id": "REMPLACER_APRES_wrangler_d1_create"
+    }
+  ]
+}

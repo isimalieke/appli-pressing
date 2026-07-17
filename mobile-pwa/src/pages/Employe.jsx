@@ -1,11 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { pressings } from '../data/mock.js'
+import { api, normaliserPressing, formaterCreneau } from '../api.js'
 
 export default function Employe() {
   const { state, dispatch } = useApp()
   const commande = state.commande
-  const [creneauChoisi, setCreneauChoisi] = useState('')
+  const [creneauChoisi, setCreneauChoisi] = useState(null)
+  const [pressing, setPressing] = useState(null)
+
+  useEffect(() => {
+    if (commande?.pressingId) {
+      api.detailPressing(commande.pressingId).then((d) => setPressing(normaliserPressing(d)))
+    }
+  }, [commande?.pressingId])
 
   if (!commande || !commande.numeroTicket) {
     return (
@@ -19,15 +26,13 @@ export default function Employe() {
     )
   }
 
-  const pressing = pressings.find((p) => p.id === commande.pressingId)
-
-  function valider(articleId, etapeIndex) {
-    dispatch({ type: 'VALIDER_ETAPE', articleId, etapeIndex, employe: 'Employé connecté' })
+  function valider(articleId, etape) {
+    dispatch({ type: 'VALIDER_ETAPE', articleId, etapeIndex: etape.ordre, employe: 'Employé connecté' })
   }
 
   function reviserCreneau() {
     if (!creneauChoisi) return
-    dispatch({ type: 'REVISER_CRENEAU', creneau: creneauChoisi })
+    dispatch({ type: 'REVISER_CRENEAU', creneau: formaterCreneau(creneauChoisi) })
   }
 
   return (
@@ -40,7 +45,7 @@ export default function Employe() {
           <div className="ligne-entre">
             <strong style={{ fontSize: '0.85rem' }}>{a.type} — {a.etiquette}</strong>
           </div>
-          {a.etapes.map((e, i) => (
+          {a.etapes.map((e) => (
             <div key={e.libelle} className="ligne-entre" style={{ padding: '6px 0', fontSize: '0.8rem' }}>
               <span style={{ color: e.statut === 'validee' ? 'var(--vert)' : 'var(--texte)' }}>
                 {e.libelle}
@@ -51,7 +56,7 @@ export default function Employe() {
               {e.statut === 'validee' ? (
                 <span className="badge badge-succes">Validée</span>
               ) : e.statut === 'en_cours' ? (
-                <button onClick={() => valider(a.id, i)}>Valider cette étape</button>
+                <button onClick={() => valider(a.id, e)}>Valider cette étape</button>
               ) : (
                 <span style={{ color: 'var(--texte-muted)' }}>À faire</span>
               )}
@@ -62,13 +67,13 @@ export default function Employe() {
 
       <h2>Réviser le créneau de retrait</h2>
       <p className="sous-titre">Réservé au gérant ou à un employé habilité.</p>
-      {pressing.creneauxRetrait.map((c) => (
+      {(pressing?.creneauxRetrait || []).map((c) => (
         <div
-          key={c}
-          className={`card card-selectionnable ${creneauChoisi === c ? 'actif' : ''}`}
+          key={c.id}
+          className={`card card-selectionnable ${creneauChoisi?.id === c.id ? 'actif' : ''}`}
           onClick={() => setCreneauChoisi(c)}
         >
-          {c}
+          {formaterCreneau(c)}
         </div>
       ))}
       <button className="primaire" disabled={!creneauChoisi} onClick={reviserCreneau}>

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
+import { formaterCreneau } from '../api.js'
 
 export default function NouvelleCommande() {
   const { pressingCourant, dispatch } = useApp()
   const navigate = useNavigate()
   const [mode, setMode] = useState('comptoir')
-  const [creneau, setCreneau] = useState(null)
+  const [creneauId, setCreneauId] = useState(null)
 
   if (!pressingCourant) {
     return (
@@ -19,13 +20,13 @@ export default function NouvelleCommande() {
 
   const creneaux = pressingCourant.creneauxDepot
 
-  function confirmer() {
-    if (!creneau) return
-    dispatch({
+  async function confirmer() {
+    if (!creneauId) return
+    await dispatch({
       type: 'DEMARRER_COMMANDE',
       pressingId: pressingCourant.id,
       modeDepot: mode,
-      creneauDepot: creneau,
+      creneauDepotId: creneauId,
     })
     navigate('/commande/soins')
   }
@@ -43,7 +44,7 @@ export default function NouvelleCommande() {
           <span><i className="ti ti-building-store" aria-hidden="true" style={{ marginRight: 6 }}></i>Déposer au pressing</span>
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--texte-muted)', marginTop: 4 }}>
-          {pressingCourant.distanceKm} km — {pressingCourant.adresse}
+          {pressingCourant.adresse}
         </div>
       </div>
 
@@ -62,15 +63,15 @@ export default function NouvelleCommande() {
       <h2>Créneaux disponibles</h2>
       {creneaux.map((c) => (
         <div
-          key={c}
-          className={`card card-selectionnable ${creneau === c ? 'actif' : ''}`}
-          onClick={() => setCreneau(c)}
+          key={c.id}
+          className={`card card-selectionnable ${creneauId === c.id ? 'actif' : ''}`}
+          onClick={() => setCreneauId(c.id)}
         >
-          {c}
+          {formaterCreneau(c)}
         </div>
       ))}
 
-      <button className="primaire" disabled={!creneau} onClick={confirmer} style={{ marginTop: '1rem' }}>
+      <button className="primaire" disabled={!creneauId} onClick={confirmer} style={{ marginTop: '1rem' }}>
         Confirmer le créneau
       </button>
     </section>

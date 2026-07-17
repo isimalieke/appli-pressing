@@ -1,16 +1,31 @@
-import { useState } from 'react'
-import { pressings } from '../data/mock.js'
+import { useEffect, useState } from 'react'
+import { useApp } from '../context/AppContext.jsx'
+import { api, normaliserPressing, formaterCreneau } from '../api.js'
 
 export default function Gerant() {
-  const [pressingId, setPressingId] = useState(pressings[0].id)
-  const pressing = pressings.find((p) => p.id === pressingId)
+  const { pressings } = useApp()
+  const [pressingId, setPressingId] = useState(null)
+  const [pressing, setPressing] = useState(null)
+  const [staff, setStaff] = useState([])
 
-  const employesMock = [
-    { nom: 'Fatou D.', poste: 'Réception' },
-    { nom: 'Ibrahim K.', poste: 'Lavage' },
-    { nom: 'Awa K.', poste: 'Repassage' },
-    { nom: 'Moussa T.', poste: 'Caisse' },
-  ]
+  useEffect(() => {
+    if (!pressingId && pressings.length) setPressingId(pressings[0].id)
+  }, [pressings, pressingId])
+
+  useEffect(() => {
+    if (!pressingId) return
+    api.detailPressing(pressingId).then((d) => setPressing(normaliserPressing(d)))
+    api.listerStaff(pressingId).then(setStaff)
+  }, [pressingId])
+
+  if (!pressing) {
+    return (
+      <section>
+        <h1>Configuration du pressing</h1>
+        <p className="sous-titre">Chargement...</p>
+      </section>
+    )
+  }
 
   return (
     <section>
@@ -24,12 +39,15 @@ export default function Gerant() {
       </select>
 
       <h2>Catalogue de soins et tarifs</h2>
-      {pressing.soins.map((s) => (
-        <div key={s.id} className="card ligne-entre">
-          <span style={{ fontSize: '0.85rem' }}>{s.libelle}</span>
-          <strong>{s.prix.toFixed(2)} EUR</strong>
-        </div>
-      ))}
+      {pressing.soins.map((s) => {
+        const tarif = pressing.tarifs.find((t) => t.soin_id === s.id)
+        return (
+          <div key={s.id} className="card ligne-entre">
+            <span style={{ fontSize: '0.85rem' }}>{s.libelle}</span>
+            <strong>{tarif ? tarif.prix.toFixed(2) : '—'} EUR</strong>
+          </div>
+        )
+      })}
 
       <h2>Règles</h2>
       <div className="card">
@@ -42,19 +60,20 @@ export default function Gerant() {
 
       <h2>Créneaux de dépôt</h2>
       {pressing.creneauxDepot.map((c) => (
-        <div key={c} className="card">{c}</div>
+        <div key={c.id} className="card">{formaterCreneau(c)}</div>
       ))}
 
       <h2>Créneaux de retrait</h2>
       {pressing.creneauxRetrait.map((c) => (
-        <div key={c} className="card">{c}</div>
+        <div key={c.id} className="card">{formaterCreneau(c)}</div>
       ))}
 
       <h2>Employés</h2>
-      {employesMock.map((e) => (
-        <div key={e.nom} className="card ligne-entre">
-          <span style={{ fontSize: '0.85rem' }}>{e.nom}</span>
-          <span className="badge badge-neutre">{e.poste}</span>
+      {staff.length === 0 && <p className="sous-titre">Aucun employé enregistré pour ce pressing.</p>}
+      {staff.map((e) => (
+        <div key={e.id} className="card ligne-entre">
+          <span style={{ fontSize: '0.85rem' }}>{e.prenom} {e.nom}</span>
+          <span className="badge badge-neutre">{e.role === 'gerant' ? 'Gérant' : e.poste || 'Employé'}</span>
         </div>
       ))}
 

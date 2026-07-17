@@ -1,13 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
-
-function versDataUrl(fichier) {
-  return new Promise((resolve) => {
-    const lecteur = new FileReader()
-    lecteur.onload = () => resolve(lecteur.result)
-    lecteur.readAsDataURL(fichier)
-  })
-}
+import { redimensionnerImage } from '../api.js'
 
 export default function Inventaire() {
   const { state, dispatch } = useApp()
@@ -26,7 +19,7 @@ export default function Inventaire() {
   async function ajouterPhoto(articleId, event) {
     const fichier = event.target.files?.[0]
     if (!fichier) return
-    const dataUrl = await versDataUrl(fichier)
+    const dataUrl = await redimensionnerImage(fichier)
     dispatch({ type: 'AJOUTER_PHOTO', articleId, dataUrl })
   }
 
@@ -34,8 +27,8 @@ export default function Inventaire() {
     dispatch({ type: 'DEFINIR_RESERVE', articleId, texte })
   }
 
-  function valider() {
-    dispatch({ type: 'VALIDER_INVENTAIRE' })
+  async function valider() {
+    await dispatch({ type: 'VALIDER_INVENTAIRE' })
     navigate('/commande/ticket')
   }
 

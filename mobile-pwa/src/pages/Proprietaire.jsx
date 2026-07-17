@@ -1,13 +1,23 @@
-import { pressings } from '../data/mock.js'
-
-const kpiMock = {
-  p1: { commandesMois: 142, ca: 3120.5, nonRecupere: 4 },
-  p2: { commandesMois: 98, ca: 2140.0, nonRecupere: 2 },
-}
+import { useEffect, useState } from 'react'
+import { useApp } from '../context/AppContext.jsx'
+import { api } from '../api.js'
 
 export default function Proprietaire() {
-  const totalCommandes = pressings.reduce((s, p) => s + (kpiMock[p.id]?.commandesMois || 0), 0)
-  const totalCa = pressings.reduce((s, p) => s + (kpiMock[p.id]?.ca || 0), 0)
+  const { pressings } = useApp()
+  const [kpiParPressing, setKpiParPressing] = useState({})
+
+  useEffect(() => {
+    pressings.forEach((p) => {
+      api.listerCommandesPressing(p.id).then((commandes) => {
+        const ca = commandes.reduce((s, c) => s + (c.prix_total || 0), 0)
+        const nonRecupere = commandes.filter((c) => c.statut === 'non_recuperee').length
+        setKpiParPressing((k) => ({ ...k, [p.id]: { commandes: commandes.length, ca, nonRecupere } }))
+      })
+    })
+  }, [pressings])
+
+  const totalCommandes = Object.values(kpiParPressing).reduce((s, k) => s + k.commandes, 0)
+  const totalCa = Object.values(kpiParPressing).reduce((s, k) => s + k.ca, 0)
 
   return (
     <section>
@@ -15,13 +25,13 @@ export default function Proprietaire() {
       <p className="sous-titre">Vue consolidée de tous les pressings — accès réservé au propriétaire dans la version finale.</p>
 
       <div className="card">
-        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Commandes ce mois-ci (tous pressings)</span><strong>{totalCommandes}</strong></div>
-        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Chiffre d'affaires ce mois-ci</span><strong>{totalCa.toFixed(2)} EUR</strong></div>
+        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Commandes (tous pressings)</span><strong>{totalCommandes}</strong></div>
+        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Chiffre d'affaires cumulé</span><strong>{totalCa.toFixed(2)} EUR</strong></div>
       </div>
 
       <h2>Par pressing</h2>
       {pressings.map((p) => {
-        const kpi = kpiMock[p.id] || { commandesMois: 0, ca: 0, nonRecupere: 0 }
+        const kpi = kpiParPressing[p.id] || { commandes: 0, ca: 0, nonRecupere: 0 }
         return (
           <div key={p.id} className="card">
             <div className="ligne-entre">
@@ -29,7 +39,7 @@ export default function Proprietaire() {
               <span className="badge badge-neutre">Gérant : à définir</span>
             </div>
             <div style={{ fontSize: '0.8rem', marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Commandes</span><span>{kpi.commandesMois}</span></div>
+              <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Commandes</span><span>{kpi.commandes}</span></div>
               <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Chiffre d'affaires</span><span>{kpi.ca.toFixed(2)} EUR</span></div>
               <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Linge non récupéré</span><span>{kpi.nonRecupere}</span></div>
             </div>
@@ -38,8 +48,8 @@ export default function Proprietaire() {
       })}
 
       <p className="sous-titre">
-        Écran de démonstration : les chiffres sont fictifs. La nomination des gérants et la
-        création de nouveaux pressings ne sont pas encore branchées.
+        Chiffres calculés à partir des vraies commandes enregistrées en base. La nomination des
+        gérants et la création de nouveaux pressings ne sont pas encore branchées.
       </p>
     </section>
   )

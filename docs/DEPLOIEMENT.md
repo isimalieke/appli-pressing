@@ -2,24 +2,29 @@
 
 ## Vue d'ensemble
 
-- **GitHub** : hébergement du code source, déclenche le déploiement à chaque push sur `main`.
-- **Cloudflare Pages** : hébergement statique de la PWA (`mobile-pwa/`) — gratuit sur le plan actuel de Cloudflare pour un usage standard (limites : builds/mois, bande passante — à vérifier sur cloudflare.com au moment de l'inscription, ces limites évoluent).
-- **Cloudflare Workers** (si besoin d'API) et **Cloudflare D1** (base SQL) : également disponibles en plan gratuit avec quotas (nombre de requêtes/jour, stockage) — à valider selon le volume réel attendu.
+- **GitHub** (`isimalieke/appli-pressing`) : hébergement du code source.
+- **Front (PWA)** : `mobile-pwa/`, déployé sur **Cloudflare Workers** via l'intégration directe GitHub de Cloudflare (Workers & Pages → Import an existing Git repository). Chaque push sur `main` redéploie automatiquement. URL actuelle : `https://appli-pressing.isima-lieke.workers.dev`.
+- **Backend (API)** : `backend/`, un Worker séparé exposant une API REST, branché sur **Cloudflare D1** (base SQL).
+- Le fichier `.github/workflows/deploy-pwa.yml` préparé initialement n'est plus utilisé — l'intégration directe Cloudflare↔GitHub remplace ce mécanisme pour le front. Il peut être supprimé ou laissé inactif.
 
-## Étapes de mise en place
+## Front — déjà en place
 
-1. Créer le dépôt sur GitHub et y pousser ce projet (`git remote add origin <url>` puis `git push -u origin main`).
-2. Créer un compte Cloudflare (gratuit) si ce n'est pas déjà fait.
-3. Dans Cloudflare, créer un projet Pages nommé `appli-pressing` (nom utilisé dans le workflow `deploy-pwa.yml` — à adapter si un autre nom est choisi).
-4. Générer un **API Token** Cloudflare avec les permissions Pages:Edit (Cloudflare dashboard → My Profile → API Tokens).
-5. Récupérer l'**Account ID** Cloudflare (visible sur le dashboard, dans la barre latérale de n'importe quel domaine/compte).
-6. Dans GitHub, aller dans Settings → Secrets and variables → Actions, et ajouter :
-   - `CLOUDFLARE_API_TOKEN`
-   - `CLOUDFLARE_ACCOUNT_ID`
-7. Chaque push sur `main` modifiant `mobile-pwa/` déclenche le workflow `.github/workflows/deploy-pwa.yml`, qui build et déploie automatiquement sur Cloudflare Pages.
+Root directory : `mobile-pwa`, build command `npm run build`, deploy command `npx wrangler deploy` (config dans `mobile-pwa/wrangler.jsonc`). Rien à refaire ici sauf changement de configuration.
+
+## Backend — mise en place (nouveau)
+
+1. Depuis le dossier `backend/`, installer Wrangler : `npm install`.
+2. Créer la base D1 : `npx wrangler d1 create appli-pressing-db`. La commande affiche un `database_id` à copier.
+3. Coller ce `database_id` dans `backend/wrangler.jsonc`, à la place de `REMPLACER_APRES_wrangler_d1_create`.
+4. Appliquer le schéma en local pour tester : `npm run db:migrate:local` puis `npm run db:seed:local` (données de démonstration, mêmes pressings que le frontend mock).
+5. Lancer le serveur de développement local : `npm run dev` (démarre sur `http://localhost:8787` par défaut).
+6. Une fois testé, appliquer le schéma en production : `npm run db:migrate:remote` (et `db:seed:remote` si des données de démonstration sont souhaitées en ligne).
+7. Déployer le Worker : `npm run deploy`. Cloudflare affiche l'URL du type `appli-pressing-api.<compte>.workers.dev`.
+8. Pour un déploiement continu comme le front, ce Worker peut aussi être connecté à GitHub via Workers & Pages → Import an existing Git repository, avec `Root directory` = `backend` et `Deploy command` = `npx wrangler deploy` (pas de build command nécessaire, pas de framework).
 
 ## Non couvert à ce stade
 
-- Backend/API (Cloudflare Workers) : pas encore scaffoldé, à faire dans une étape suivante une fois le modèle de données validé.
-- Base de données (Cloudflare D1 ou autre) : à choisir.
-- Nom de domaine personnalisé : Cloudflare Pages fournit un sous-domaine gratuit (`*.pages.dev`) par défaut ; un domaine personnalisé peut être ajouté séparément.
+- **Authentification** : l'API backend est actuellement ouverte, sans vérification d'identité — à traiter avant tout usage avec de vraies données clients (étape 2 du plan de développement).
+- **Connexion frontend ↔ backend** : le frontend (`mobile-pwa`) utilise encore des données en mémoire locale (`AppContext.jsx` + `localStorage`), pas encore les appels à cette API.
+- **Paiement et WhatsApp réels** : voir `docs/CAHIER_DES_CHARGES.md` §11 et §6 pour les options envisagées, y compris des versions simplifiées pour un pilote.
+- Nom de domaine personnalisé : un sous-domaine `*.workers.dev` gratuit est utilisé par défaut ; un domaine personnalisé peut être ajouté séparément dans Cloudflare.

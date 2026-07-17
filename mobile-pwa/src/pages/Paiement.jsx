@@ -21,10 +21,9 @@ export default function Paiement() {
 
   const montant = type === 'solde' ? commande.montantSolde : commande.montantAcompte
 
-  function payer() {
-    dispatch({ type: 'PAYER', typePaiement: type, montant, moyen })
+  async function payer() {
+    await dispatch({ type: 'PAYER', typePaiement: type, montant, moyen })
     if (type === 'solde') {
-      dispatch({ type: 'RETIRER_COMMANDE' })
       navigate('/commande/retire')
     } else {
       navigate('/commande/suivi')

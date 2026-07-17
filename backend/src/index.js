@@ -256,6 +256,13 @@ async function validerEtape(env, articleId, ordre, body) {
   return json({ ok: true, statut_commande: nouveauStatut })
 }
 
+async function noterCommande(env, commandeId, body) {
+  const note = Number(body.note)
+  if (!note || note < 1 || note > 5) return erreur('note doit être un entier entre 1 et 5')
+  await env.DB.prepare(`UPDATE commandes SET evaluation = ?, updated_at = datetime('now') WHERE id = ?`).bind(note, commandeId).run()
+  return json({ ok: true })
+}
+
 async function reviserCreneau(env, commandeId, body) {
   await env.DB.prepare(
     `UPDATE commandes SET creneau_retrait_revise = ?, statut = 'revisee', updated_at = datetime('now') WHERE id = ?`
@@ -300,6 +307,7 @@ export default {
       if (segments[0] === 'commandes' && segments[2] === 'articles' && method === 'POST') return ajouterArticle(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'valider-inventaire' && method === 'POST') return validerInventaire(env, segments[1])
       if (segments[0] === 'commandes' && segments[2] === 'creneau-retrait' && method === 'PATCH') return reviserCreneau(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'evaluation' && method === 'PATCH') return noterCommande(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'paiements' && method === 'POST') return enregistrerPaiement(env, segments[1], await lireJSON(request))
 
       if (segments[0] === 'articles' && segments[2] === 'soins' && method === 'PUT') return definirSoinsArticle(env, segments[1], await lireJSON(request))

@@ -9,6 +9,9 @@ import Suivi from './pages/Suivi.jsx'
 import CommandeRetiree from './pages/CommandeRetiree.jsx'
 import Compte from './pages/Compte.jsx'
 import Employe from './pages/Employe.jsx'
+import Gerant from './pages/Gerant.jsx'
+import Proprietaire from './pages/Proprietaire.jsx'
+import ModeTest from './pages/ModeTest.jsx'
 
 export default function App() {
   const location = useLocation()
@@ -28,6 +31,9 @@ export default function App() {
           <Route path="/paiement/:type" element={<Paiement />} />
           <Route path="/compte" element={<Compte />} />
           <Route path="/employe" element={<Employe />} />
+          <Route path="/gerant" element={<Gerant />} />
+          <Route path="/proprietaire" element={<Proprietaire />} />
+          <Route path="/test" element={<ModeTest />} />
         </Routes>
       </main>
       <nav className="app-nav no-print">
@@ -42,6 +48,9 @@ export default function App() {
         </Link>
         <Link to="/employe" className={estVueEmploye ? 'actif' : ''}>
           <i className="ti ti-building-store" aria-hidden="true"></i>Employé
+        </Link>
+        <Link to="/test" className={location.pathname === '/test' ? 'actif' : ''}>
+          <i className="ti ti-flask" aria-hidden="true"></i>Test
         </Link>
       </nav>
     </div>

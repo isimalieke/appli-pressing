@@ -75,6 +75,46 @@ async function listerStaff(env, pressingId) {
   return json(results)
 }
 
+// Filtre d'accès minimal aux vues internes (employé/gérant/propriétaire) pour un pilote sur
+// appareil partagé au pressing : pas de mot de passe, pas de session serveur, juste un code PIN
+// court par employé. À renforcer avant un déploiement multi-pressing public.
+async function connexionStaff(env, pressingId, body) {
+  const codePin = (body.code_pin || '').trim()
+  if (!codePin) return erreur('Code PIN requis')
+  const staff = await env.DB.prepare(
+    `SELECT ps.id, ps.role, ps.poste, u.nom, u.prenom
+     FROM pressing_staff ps JOIN users u ON u.id = ps.user_id
+     WHERE ps.pressing_id = ? AND ps.code_pin = ? AND ps.actif = 1`
+  ).bind(pressingId, codePin).first()
+  if (!staff) return erreur('Code PIN incorrect', 401)
+  return json(staff)
+}
+
+// Identifie un client par son numéro de téléphone (pas de mot de passe, cohérent avec un usage
+// WhatsApp-first) : retrouve son compte s'il existe, le crée sinon.
+async function identifierClient(env, body) {
+  const telephone = (body.telephone || '').trim()
+  if (!telephone) return erreur('Numéro de téléphone requis')
+
+  let user = await env.DB.prepare('SELECT * FROM users WHERE telephone = ?').bind(telephone).first()
+  if (!user) {
+    const userId = uid('user')
+    await env.DB.prepare(
+      `INSERT INTO users (id, telephone, mot_de_passe_hash, nom, prenom) VALUES (?, ?, 'x', ?, ?)`
+    ).bind(userId, telephone, body.nom || null, body.prenom || null).run()
+    user = { id: userId, nom: body.nom || null, prenom: body.prenom || null }
+  }
+
+  let client = await env.DB.prepare('SELECT * FROM clients WHERE user_id = ?').bind(user.id).first()
+  if (!client) {
+    const clientId = uid('client')
+    await env.DB.prepare('INSERT INTO clients (id, user_id) VALUES (?, ?)').bind(clientId, user.id).run()
+    client = { id: clientId }
+  }
+
+  return json({ id: client.id, nom: user.nom, prenom: user.prenom, telephone })
+}
+
 // --- Commandes ---------------------------------------------------------------
 
 async function creerCommande(env, body) {
@@ -558,7 +598,9 @@ export default {
       if (segments[0] === 'pressings' && segments[2] === 'prix-kilo' && method === 'PATCH') return await definirPrixKilo(env, segments[1], await lireJSON(request))
       if (segments[0] === 'pressings' && segments[2] === 'devise' && method === 'PATCH') return await definirDevise(env, segments[1], await lireJSON(request))
       if (segments[0] === 'pressings' && segments[2] === 'commandes' && method === 'GET') return await listerCommandesPressing(env, segments[1])
+      if (segments[0] === 'pressings' && segments[2] === 'connexion-staff' && method === 'POST') return await connexionStaff(env, segments[1], await lireJSON(request))
 
+      if (segments[0] === 'clients' && segments[1] === 'identification' && method === 'POST') return await identifierClient(env, await lireJSON(request))
       if (segments[0] === 'clients' && segments[2] === 'commandes' && method === 'GET') return await listerCommandesClient(env, segments[1])
 
       if (segments[0] === 'commandes' && segments.length === 1 && method === 'POST') return await creerCommande(env, await lireJSON(request))

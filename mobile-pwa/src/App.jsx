@@ -1,5 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { useApp } from './context/AppContext.jsx'
 import Accueil from './pages/Accueil.jsx'
+import IdentificationClient from './pages/IdentificationClient.jsx'
 import NouvelleCommande from './pages/NouvelleCommande.jsx'
 import ChoixSoins from './pages/ChoixSoins.jsx'
 import Kilo from './pages/Kilo.jsx'
@@ -13,10 +15,30 @@ import Employe from './pages/Employe.jsx'
 import Gerant from './pages/Gerant.jsx'
 import Proprietaire from './pages/Proprietaire.jsx'
 import ModeTest from './pages/ModeTest.jsx'
+import ConnexionEmploye from './components/ConnexionEmploye.jsx'
+
+// Vues réservées au personnel : filtrées par ConnexionEmploye (code PIN), pas par
+// l'identification client — /test reste ouvert sans filtre, c'est le panneau de démonstration.
+const VUES_PERSONNEL = ['/employe', '/gerant', '/proprietaire']
 
 export default function App() {
   const location = useLocation()
+  const { state } = useApp()
   const estVueEmploye = location.pathname.startsWith('/employe')
+  const estVuePersonnel = VUES_PERSONNEL.some((v) => location.pathname.startsWith(v))
+  const estVueTest = location.pathname === '/test'
+
+  // Le client doit être identifié (numéro de téléphone) avant d'utiliser le parcours de dépôt —
+  // sauf sur les vues personnel (leur propre filtre PIN) et le panneau de test.
+  if (!estVuePersonnel && !estVueTest && !state.clientSession) {
+    return (
+      <div className="app">
+        <main className="app-content">
+          <IdentificationClient />
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="app">
@@ -32,9 +54,9 @@ export default function App() {
           <Route path="/commande/retire" element={<CommandeRetiree />} />
           <Route path="/paiement/:type" element={<Paiement />} />
           <Route path="/compte" element={<Compte />} />
-          <Route path="/employe" element={<Employe />} />
-          <Route path="/gerant" element={<Gerant />} />
-          <Route path="/proprietaire" element={<Proprietaire />} />
+          <Route path="/employe" element={<ConnexionEmploye><Employe /></ConnexionEmploye>} />
+          <Route path="/gerant" element={<ConnexionEmploye><Gerant /></ConnexionEmploye>} />
+          <Route path="/proprietaire" element={<ConnexionEmploye><Proprietaire /></ConnexionEmploye>} />
           <Route path="/test" element={<ModeTest />} />
         </Routes>
       </main>

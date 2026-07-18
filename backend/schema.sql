@@ -58,7 +58,12 @@ CREATE TABLE pressing_staff (
   user_id TEXT NOT NULL REFERENCES users(id),
   role TEXT NOT NULL CHECK (role IN ('gerant', 'employe')),
   poste TEXT,
-  actif INTEGER NOT NULL DEFAULT 1
+  actif INTEGER NOT NULL DEFAULT 1,
+  -- Code PIN court pour l'accès aux vues internes (employé/gérant/propriétaire) depuis un
+  -- appareil partagé au pressing. Ce n'est pas une authentification forte (pas de mot de passe,
+  -- pas de session serveur) : c'est un filtre minimal pour un pilote, à renforcer avant un
+  -- déploiement multi-pressing public.
+  code_pin TEXT
 );
 
 CREATE TABLE soins (

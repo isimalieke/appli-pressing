@@ -3,6 +3,18 @@ import { api, CLIENT_ID_DEMO, normaliserCommande, normaliserPressing, formaterMo
 
 const AppContext = createContext(null)
 
+// Sessions minimales, sans mot de passe ni token serveur — cohérent avec le stade pilote
+// (cf. dispatch CONNEXION_STAFF / IDENTIFIER_CLIENT). Persistées en local pour ne pas redemander
+// le code PIN ou le numéro de téléphone à chaque rechargement de page sur l'appareil du pressing.
+function lireSession(cle) {
+  try {
+    const brut = localStorage.getItem(cle)
+    return brut ? JSON.parse(brut) : null
+  } catch {
+    return null
+  }
+}
+
 export function AppProvider({ children }) {
   const [pressings, setPressings] = useState([])
   const [pressingCourant, setPressingCourant] = useState(null)
@@ -10,6 +22,8 @@ export function AppProvider({ children }) {
   const [notifications, setNotifications] = useState([])
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState(null)
+  const [staffSession, setStaffSession] = useState(() => lireSession('pressing_staff_session'))
+  const [clientSession, setClientSession] = useState(() => lireSession('pressing_client_session'))
 
   useEffect(() => {
     api.listerPressings().then(setPressings).catch((e) => setErreur(e.message))
@@ -37,7 +51,16 @@ export function AppProvider({ children }) {
     setCommande(normaliserCommande(data))
   }, [])
 
-  const state = { pressingSelectionneId: pressingCourant?.id || null, commande, notifications, enLigne: true, chargement, erreur }
+  const state = {
+    pressingSelectionneId: pressingCourant?.id || null,
+    commande,
+    notifications,
+    enLigne: true,
+    chargement,
+    erreur,
+    staffSession,
+    clientSession,
+  }
 
   const dispatch = useCallback(async (action) => {
     switch (action.type) {
@@ -48,10 +71,39 @@ export function AppProvider({ children }) {
         })
       }
 
+      case 'CONNEXION_STAFF': {
+        return actionAvecChargement(async () => {
+          const staff = await api.connexionStaff(action.pressingId, action.codePin)
+          const session = { ...staff, pressingId: action.pressingId }
+          setStaffSession(session)
+          localStorage.setItem('pressing_staff_session', JSON.stringify(session))
+        })
+      }
+
+      case 'DECONNEXION_STAFF': {
+        setStaffSession(null)
+        localStorage.removeItem('pressing_staff_session')
+        return
+      }
+
+      case 'IDENTIFIER_CLIENT': {
+        return actionAvecChargement(async () => {
+          const client = await api.identifierClient(action.telephone, action.nom, action.prenom)
+          setClientSession(client)
+          localStorage.setItem('pressing_client_session', JSON.stringify(client))
+        })
+      }
+
+      case 'DECONNEXION_CLIENT': {
+        setClientSession(null)
+        localStorage.removeItem('pressing_client_session')
+        return
+      }
+
       case 'DEMARRER_COMMANDE': {
         return actionAvecChargement(async () => {
           const { id } = await api.creerCommande({
-            client_id: CLIENT_ID_DEMO,
+            client_id: clientSession?.id || CLIENT_ID_DEMO,
             pressing_id: action.pressingId,
             mode_depot: action.modeDepot,
             mode_facturation: action.modeFacturation,
@@ -192,7 +244,7 @@ export function AppProvider({ children }) {
       default:
         return
     }
-  }, [commande, rafraichirCommande, pressingCourant])
+  }, [commande, rafraichirCommande, pressingCourant, clientSession])
 
   return (
     <AppContext.Provider value={{ state, dispatch, pressings, pressingCourant }}>

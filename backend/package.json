@@ -18,7 +18,9 @@
     "db:migrate:kilo:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/005_kilo.sql",
     "db:migrate:kilo:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/005_kilo.sql",
     "db:migrate:devise:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/006_devise.sql",
-    "db:migrate:devise:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/006_devise.sql"
+    "db:migrate:devise:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/006_devise.sql",
+    "db:migrate:staff-pin:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/007_staff_pin.sql",
+    "db:migrate:staff-pin:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/007_staff_pin.sql"
   },
   "devDependencies": {
     "wrangler": "^4.112.0"

@@ -4,6 +4,7 @@
 INSERT INTO users (id, email, telephone, mot_de_passe_hash, nom, prenom) VALUES
   ('u-owner', 'proprietaire@example.com', '+221700000001', 'x', 'Lieke', 'Isima'),
   ('u-gerant1', 'gerant1@example.com', '+221700000002', 'x', 'Diop', 'Fatou'),
+  ('u-employe1', 'employe1@example.com', '+221700000004', 'x', 'Ndiaye', 'Moussa'),
   ('u-client1', 'client1@example.com', '+221700000003', 'x', 'Client', 'Test');
 
 INSERT INTO clients (id, user_id, adresse_principale) VALUES
@@ -13,8 +14,9 @@ INSERT INTO pressings (id, proprietaire_id, nom, adresse, rayon_collecte_km, aco
   ('p1', 'u-owner', 'Pressing du Marché', '12 avenue de la République', 3, 30, 48, 24, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.5, 18, 1.5, 'XOF'),
   ('p2', 'u-owner', 'Clean Express', '5 rue des Lilas', 5, 40, 48, 12, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.3, 0, 0, 'EUR');
 
-INSERT INTO pressing_staff (id, pressing_id, user_id, role, poste) VALUES
-  ('ps-1', 'p1', 'u-gerant1', 'gerant', NULL);
+INSERT INTO pressing_staff (id, pressing_id, user_id, role, poste, code_pin) VALUES
+  ('ps-1', 'p1', 'u-gerant1', 'gerant', NULL, '1234'),
+  ('ps-2', 'p1', 'u-employe1', 'employe', 'Comptoir', '5678');
 
 INSERT INTO soins (id, pressing_id, libelle) VALUES
   ('s-p1-lavage', 'p1', 'Lavage à l''eau'),

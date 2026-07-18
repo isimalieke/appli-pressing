@@ -21,22 +21,24 @@ function estPrete(statut) {
   return statut === 'prete_retrait' || statut === 'prete_livraison'
 }
 
-// États considérés comme "clos" : on ne les affiche pas dans le suivi quotidien, pour ne montrer
-// que ce qui est encore actif (le client n'a pas encore récupéré son linge, ou la commande n'est
-// pas annulée). 'creee' est également masqué côté personnel : le linge n'est pas encore
-// physiquement arrivé au pressing, il n'y a donc rien à traiter ni à afficher dans cette file.
+// États considérés comme "clos" : masqués par défaut (onglet "Toutes") pour ne montrer que ce qui
+// est encore actif, mais restent consultables via l'onglet dédié "Terminées" — l'employé, le
+// gérant et le propriétaire doivent pouvoir retrouver une commande déjà remise, pas seulement
+// celles en cours. 'creee' reste masqué partout : le linge n'est pas encore physiquement arrivé au
+// pressing, il n'y a donc rien à afficher.
 const STATUTS_CLOS = ['terminee', 'annulee']
 const STATUTS_MASQUES = ['creee']
 
 // Filtres dédiés "À livrer" / "À retirer" plutôt qu'un seul onglet "Prêtes" mélangeant les deux :
 // la personne qui prépare les tournées de livraison ne doit voir que sa liste, sans avoir à
 // ignorer les commandes qui attendent un simple retrait au comptoir, et inversement pour la
-// personne au comptoir.
+// personne au comptoir. "Terminées" donne la vue complète sur l'historique récent.
 const FILTRES = [
   { id: 'toutes', libelle: 'Toutes' },
   { id: 'en_cours', libelle: 'En traitement' },
   { id: 'a_livrer', libelle: 'À livrer' },
   { id: 'a_retirer', libelle: 'À retirer' },
+  { id: 'terminees', libelle: 'Terminées' },
 ]
 
 // Vue simple, partagée entre Employé, Gérant et Propriétaire : une ligne par commande en cours,
@@ -86,12 +88,15 @@ export default function SuiviCommandes({ pressingId }) {
   const LIBELLES_ETAPE_STATUT = { validee: 'Fait', en_cours: 'En cours', a_faire: 'À faire' }
 
   const enCours = commandes
-    .filter((c) => !STATUTS_CLOS.includes(c.statut) && !STATUTS_MASQUES.includes(c.statut))
+    .filter((c) => !STATUTS_MASQUES.includes(c.statut))
     .filter((c) => {
+      if (filtre === 'terminees') return c.statut === 'terminee'
       if (filtre === 'a_livrer') return c.statut === 'prete_livraison'
       if (filtre === 'a_retirer') return c.statut === 'prete_retrait'
       if (filtre === 'en_cours') return !estPrete(c.statut)
-      return true
+      // "Toutes" : la vue active du jour, sans les commandes déjà terminées ou annulées — celles-ci
+      // restent consultables via l'onglet "Terminées".
+      return !STATUTS_CLOS.includes(c.statut)
     })
     // Les commandes prêtes remontent en tête : c'est la file d'attente de remise au client.
     .sort((a, b) => (estPrete(a.statut) === estPrete(b.statut)) ? 0 : estPrete(a.statut) ? -1 : 1)

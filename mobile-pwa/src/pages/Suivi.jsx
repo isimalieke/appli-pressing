@@ -4,8 +4,10 @@ import { useApp } from '../context/AppContext.jsx'
 import { formaterMontant } from '../api.js'
 
 // Le mode de remise (comptoir ou domicile) est connu dès la création de la commande : la timeline
-// affiche donc directement le bon dernier jalon ("prête pour retrait" / "retirée" ou "prête, en
-// attente de collecte pour livraison" / "livrée") plutôt qu'un jalon générique.
+// affiche donc directement le bon jalon "prête" ("prête pour retrait" ou "prête, en attente de
+// collecte pour livraison"). Le dernier jalon reste un seul statut 'terminee' côté base de
+// données (déclenché par "Remis au client", quel que soit le canal), mais garde ici un libellé
+// adapté au mode de remise pour rester clair côté client.
 function jalons(modeDepot) {
   const livraison = modeDepot === 'domicile'
   return [
@@ -15,7 +17,7 @@ function jalons(modeDepot) {
       cle: livraison ? 'prete_livraison' : 'prete_retrait',
       libelle: livraison ? 'Prête, en attente de collecte pour livraison' : 'Prête pour retrait',
     },
-    { cle: livraison ? 'livree' : 'retiree', libelle: livraison ? 'Livrée' : 'Retirée' },
+    { cle: 'terminee', libelle: livraison ? 'Livrée' : 'Retirée' },
   ]
 }
 
@@ -36,7 +38,7 @@ export default function Suivi() {
   // l'emmène directement vers l'écran de fin de commande plutôt que de laisser la timeline
   // affichée telle quelle.
   useEffect(() => {
-    if (commande?.statut === 'retiree' || commande?.statut === 'livree') {
+    if (commande?.statut === 'terminee') {
       navigate('/commande/retire')
     }
   }, [commande?.statut])

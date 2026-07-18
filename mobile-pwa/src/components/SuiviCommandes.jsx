@@ -8,8 +8,7 @@ import { api, normaliserCommande } from '../api.js'
 const LIBELLES_STATUT = {
   prete_retrait: 'Prête (à retirer)',
   prete_livraison: 'Prête (à livrer)',
-  retiree: 'Retirée',
-  livree: 'Livrée',
+  terminee: 'Terminée',
   non_recuperee: 'Non récupérée',
   annulee: 'Annulée',
 }
@@ -26,7 +25,7 @@ function estPrete(statut) {
 // que ce qui est encore actif (le client n'a pas encore récupéré son linge, ou la commande n'est
 // pas annulée). 'creee' est également masqué côté personnel : le linge n'est pas encore
 // physiquement arrivé au pressing, il n'y a donc rien à traiter ni à afficher dans cette file.
-const STATUTS_CLOS = ['retiree', 'livree', 'annulee']
+const STATUTS_CLOS = ['terminee', 'annulee']
 const STATUTS_MASQUES = ['creee']
 
 // Filtres dédiés "À livrer" / "À retirer" plutôt qu'un seul onglet "Prêtes" mélangeant les deux :

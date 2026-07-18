@@ -148,10 +148,11 @@ CREATE TABLE commandes (
   express INTEGER NOT NULL DEFAULT 0,
   -- 'prete' est remplacé par 'prete_retrait' / 'prete_livraison' (le mode de remise, connu dès la
   -- création via mode_depot, distingue déjà la file d'attente comptoir de la file de livraison).
-  -- De même 'retiree' (remise comptoir) et 'livree' (remise à domicile) restent deux statuts finaux
-  -- distincts, alors qu'un seul statut 'retiree' servait auparavant pour les deux cas.
+  -- Une fois remise au client, la commande passe à 'terminee' quel que soit le canal (comptoir ou
+  -- domicile) : mode_depot reste disponible pour distinguer les deux a posteriori si besoin, sans
+  -- dupliquer cette information dans le statut.
   statut TEXT NOT NULL DEFAULT 'creee'
-    CHECK (statut IN ('creee', 'deposee', 'en_traitement', 'prete_retrait', 'prete_livraison', 'revisee', 'retiree', 'livree', 'non_recuperee', 'annulee')),
+    CHECK (statut IN ('creee', 'deposee', 'en_traitement', 'prete_retrait', 'prete_livraison', 'revisee', 'terminee', 'non_recuperee', 'annulee')),
   prix_total REAL DEFAULT 0,
   montant_ht REAL DEFAULT 0,
   montant_tva REAL DEFAULT 0,

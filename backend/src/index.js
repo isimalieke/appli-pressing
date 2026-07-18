@@ -599,17 +599,16 @@ async function enregistrerPaiement(env, commandeId, body) {
 // Marque la commande comme physiquement remise au client (retrait en magasin ou livraison
 // effectuée), indépendamment du paiement — un client peut avoir payé sans que son linge ait
 // encore quitté le pressing, ou l'inverse (paiement en espèces hors app). Seule une commande
-// prête peut être marquée remise ; le statut final dépend du mode de remise (comptoir → retiree,
-// domicile → livree).
+// prête peut être marquée remise ; un seul statut final 'terminee' couvre les deux canaux
+// (comptoir ou domicile) — mode_depot reste sur la commande pour distinguer les deux a posteriori.
 async function marquerRemise(env, commandeId) {
-  const commande = await env.DB.prepare('SELECT statut, mode_depot FROM commandes WHERE id = ?').bind(commandeId).first()
+  const commande = await env.DB.prepare('SELECT statut FROM commandes WHERE id = ?').bind(commandeId).first()
   if (!commande) return erreur('Commande introuvable', 404)
   if (commande.statut !== 'prete_retrait' && commande.statut !== 'prete_livraison') {
     return erreur('Seule une commande prête peut être marquée comme remise')
   }
-  const statutFinal = commande.mode_depot === 'domicile' ? 'livree' : 'retiree'
-  await env.DB.prepare(`UPDATE commandes SET statut = ?, updated_at = datetime('now') WHERE id = ?`).bind(statutFinal, commandeId).run()
-  return json({ ok: true, statut: statutFinal })
+  await env.DB.prepare(`UPDATE commandes SET statut = 'terminee', updated_at = datetime('now') WHERE id = ?`).bind(commandeId).run()
+  return json({ ok: true, statut: 'terminee' })
 }
 
 // --- Routeur -----------------------------------------------------------------

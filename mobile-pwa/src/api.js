@@ -55,6 +55,7 @@ export const api = {
   noterCommande: (commandeId, note) =>
     appel(`/commandes/${commandeId}/evaluation`, { method: 'PATCH', body: JSON.stringify({ note }) }),
   listerCommandesClient: (clientId) => appel(`/clients/${clientId}/commandes`),
+  listerCommandesPressing: (pressingId) => appel(`/pressings/${pressingId}/commandes`),
 }
 
 // Réduit une photo avant envoi, pour éviter des lignes trop volumineuses côté base de données.
@@ -214,4 +215,22 @@ export function formaterCreneauDomicile(c) {
   else if (diffJours === 1) jourLabel = 'demain'
   else jourLabel = `${NOMS_JOURS_LONGS[dateSlot.getDay()]} ${dateSlot.getDate()}/${dateSlot.getMonth() + 1}`
   return `${jourLabel}, ${c.heure_debut}-${c.heure_fin}`
+}
+
+const NOMS_MOIS = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+]
+
+// Formate le libellé brut stocké sur la commande ("2026-07-23 10:00-12:00") en texte lisible :
+// "collecte le 23 juillet 2026, créneau 10h00–12h00". Reste tolérant si le format est inattendu.
+export function formaterLabelCreneauCollecte(label) {
+  if (!label) return ''
+  const correspondance = label.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})-(\d{2}:\d{2})$/)
+  if (!correspondance) return label
+  const [, annee, mois, jour, heureDebut, heureFin] = correspondance
+  const date = new Date(`${annee}-${mois}-${jour}T00:00:00`)
+  const jourTexte = `${Number(jour)} ${NOMS_MOIS[date.getMonth()]} ${annee}`
+  const format = (h) => h.replace(':', 'h')
+  return `collecte le ${jourTexte}, créneau ${format(heureDebut)}–${format(heureFin)}`
 }

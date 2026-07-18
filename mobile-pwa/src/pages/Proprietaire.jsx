@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api, formaterMontant } from '../api.js'
+import SuiviCommandes from '../components/SuiviCommandes.jsx'
 
 export default function Proprietaire() {
   const { pressings } = useApp()
@@ -48,6 +49,7 @@ export default function Proprietaire() {
               <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Chiffre d'affaires</span><span>{formaterMontant(kpi.ca, p.devise)}</span></div>
               <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Linge non récupéré</span><span>{kpi.nonRecupere}</span></div>
             </div>
+            <SuiviCommandes pressingId={p.id} />
           </div>
         )
       })}

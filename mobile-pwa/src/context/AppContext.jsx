@@ -73,7 +73,15 @@ export function AppProvider({ children }) {
 
       case 'AJOUTER_ARTICLE': {
         return actionAvecChargement(async () => {
-          await api.ajouterArticle(commande.id, { type_article: action.typeArticle })
+          const { id: articleId } = await api.ajouterArticle(commande.id, { type_article: action.typeArticle })
+          // Cycle standard par défaut : tous les soins configurés par le pressing sont inclus
+          // d'emblée (le client s'attend en général à un traitement complet). Le prix total reste
+          // la somme des soins inclus — seule la présentation change, pas le calcul. Le client peut
+          // ensuite décocher via "Traitement spécial" pour les cas particuliers.
+          const tousLesSoins = (pressingCourant?.soins || []).map((s) => s.id)
+          if (tousLesSoins.length > 0) {
+            await api.definirSoinsArticle(articleId, tousLesSoins)
+          }
           await rafraichirCommande(commande.id)
         })
       }
@@ -151,7 +159,14 @@ export function AppProvider({ children }) {
         return actionAvecChargement(async () => {
           await api.validerEtape(action.articleId, action.etapeIndex, action.employe)
           await rafraichirCommande(commande.id)
-          notifier(`Étape validée sur la commande #${commande.numeroTicket}.`)
+          // Pas de notification WhatsApp à chaque étape validée : c'est une donnée de suivi
+          // interne au pressing, le client n'a pas besoin d'être averti à chaque poste franchi.
+        })
+      }
+
+      case 'NOTIFIER_CLIENT_PRET': {
+        return actionAvecChargement(async () => {
+          notifier(`Commande #${commande.numeroTicket} prête — client notifié.`)
         })
       }
 
@@ -177,7 +192,7 @@ export function AppProvider({ children }) {
       default:
         return
     }
-  }, [commande, rafraichirCommande])
+  }, [commande, rafraichirCommande, pressingCourant])
 
   return (
     <AppContext.Provider value={{ state, dispatch, pressings, pressingCourant }}>

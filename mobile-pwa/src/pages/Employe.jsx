@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api, normaliserPressing, formaterCreneau } from '../api.js'
+import SuiviCommandes from '../components/SuiviCommandes.jsx'
 
 export default function Employe() {
   const { state, dispatch } = useApp()
@@ -22,12 +23,16 @@ export default function Employe() {
           Aucune commande déposée pour l'instant. Vue destinée au personnel, distincte du parcours
           client — dans la version finale, l'accès sera réservé aux comptes employé/gérant.
         </p>
+        <SuiviCommandes pressingId={pressing?.id} />
       </section>
     )
   }
 
+  // "staff_id" doit correspondre à une vraie ligne de pressing_staff (contrainte de clé
+  // étrangère), sinon le serveur rejette l'appel. Tant que l'authentification employé n'est pas
+  // branchée, on ne transmet aucun staff_id (NULL est accepté).
   function valider(articleId, etape) {
-    dispatch({ type: 'VALIDER_ETAPE', articleId, etapeIndex: etape.ordre, employe: 'Employé connecté' })
+    dispatch({ type: 'VALIDER_ETAPE', articleId, etapeIndex: etape.ordre })
   }
 
   function reviserCreneau() {
@@ -35,63 +40,58 @@ export default function Employe() {
     dispatch({ type: 'REVISER_CRENEAU', creneau: formaterCreneau(creneauChoisi) })
   }
 
-  // Une seule tâche visible à la fois : on prend le premier article qui a encore une étape
-  // "en_cours" et on n'affiche que celle-ci, en grand, avec un unique bouton d'action.
-  // Objectif : pas de liste à parcourir, pas de choix à faire — l'employé valide, l'écran
-  // passe automatiquement à la tâche suivante.
-  const articleActif = commande.articles.find((a) => a.etapes.some((e) => e.statut === 'en_cours'))
-  const etapeActive = articleActif?.etapes.find((e) => e.statut === 'en_cours')
+  // Une ligne par article du lot, toujours visible en même temps — pas d'écran unique qui saute
+  // d'un article à l'autre. Chaque ligne montre l'étape en cours de CET article et son propre
+  // bouton "Valider" : l'employé voit tout le lot d'un coup d'œil et agit directement sur la
+  // bonne ligne, sans avoir à faire défiler pour retrouver où en est tel ou tel vêtement.
   const nbArticlesTermines = commande.articles.filter((a) => a.etapes.length > 0 && a.etapes.every((e) => e.statut === 'validee')).length
+  const commandeComplete = commande.articles.length > 0 && nbArticlesTermines === commande.articles.length
+
+  function notifierClient() {
+    dispatch({ type: 'NOTIFIER_CLIENT_PRET' })
+  }
 
   return (
     <section>
       <h1>Commande #{commande.numeroTicket}</h1>
       <p className="sous-titre">
-        Article {Math.min(nbArticlesTermines + 1, commande.articles.length)} / {commande.articles.length}
+        {nbArticlesTermines} / {commande.articles.length} articles prêts
       </p>
 
-      {articleActif && etapeActive ? (
-        <div className="card" style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-          <div style={{ color: 'var(--texte-muted)', fontSize: '0.8rem', marginBottom: 4 }}>
-            {articleActif.type} — {articleActif.etiquette}
-          </div>
-          <div style={{ fontFamily: 'var(--police-titre)', fontSize: '1.5rem', margin: '0.5rem 0 1.25rem' }}>
-            {etapeActive.libelle}
-          </div>
-          <button
-            className="primaire"
-            style={{ width: '100%', padding: '1rem', fontSize: '1.05rem' }}
-            onClick={() => valider(articleActif.id, etapeActive)}
-          >
-            Valider cette étape
-          </button>
-        </div>
-      ) : (
-        <div className="card" style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-          <span className="badge badge-succes" style={{ fontSize: '0.9rem' }}>Tous les articles sont prêts</span>
-        </div>
+      {commandeComplete && (
+        <button className="primaire" style={{ marginBottom: 10 }} onClick={notifierClient}>
+          Notifier le client — commande prête
+        </button>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {commande.articles.map((a) => {
+          const etape = a.etapes.find((e) => e.statut === 'en_cours')
           const termine = a.etapes.length > 0 && a.etapes.every((e) => e.statut === 'validee')
-          const enCours = a.id === articleActif?.id
           return (
-            <div key={a.id} className="ligne-entre" style={{ fontSize: '0.75rem', padding: '4px 2px' }}>
-              <span style={{ color: enCours ? 'var(--texte)' : 'var(--texte-muted)' }}>
-                {a.type} — {a.etiquette}
-              </span>
-              {termine ? (
-                <span className="badge badge-succes">Prêt</span>
-              ) : enCours ? (
-                <span className="badge badge-neutre">En cours</span>
-              ) : (
-                <span style={{ color: 'var(--texte-muted)' }}>En attente</span>
+            <div key={a.id} className="card">
+              <div className="ligne-entre">
+                <strong style={{ fontSize: '0.85rem' }}>{a.type} — {a.etiquette}</strong>
+                {termine && <span className="badge badge-succes">Prêt</span>}
+              </div>
+              {!termine && etape && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: '0.95rem', marginBottom: 8 }}>{etape.libelle}</div>
+                  <button
+                    className="primaire"
+                    style={{ width: '100%', padding: '10px', fontSize: '0.85rem' }}
+                    onClick={() => valider(a.id, etape)}
+                  >
+                    Valider
+                  </button>
+                </div>
               )}
             </div>
           )
         })}
       </div>
+
+      <SuiviCommandes pressingId={commande.pressingId} />
 
       <h2>Réviser le créneau de retrait</h2>
       <p className="sous-titre">Réservé au gérant ou à un employé habilité.</p>

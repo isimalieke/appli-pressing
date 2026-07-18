@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api, normaliserPressing, formaterCreneau, formaterCreneauDomicile, formaterJoursOuverts, formaterMontant } from '../api.js'
+import SuiviCommandes from '../components/SuiviCommandes.jsx'
 
 export default function Gerant() {
   const { pressings } = useApp()
@@ -88,6 +89,8 @@ export default function Gerant() {
         ))}
       </select>
 
+      <SuiviCommandes pressingId={pressingId} />
+
       <h2>Devise</h2>
       <div className="card">
         <p className="sous-titre" style={{ marginTop: 0 }}>
@@ -113,6 +116,12 @@ export default function Gerant() {
       </div>
 
       <h2>Catalogue de soins et tarifs</h2>
+      <p className="sous-titre" style={{ marginTop: 0 }}>
+        Ces soins forment le cycle standard proposé automatiquement au client pour chaque article
+        déposé (le prix total est la somme des soins inclus). Le client garde la possibilité de
+        décocher certains soins via "Traitement spécial" pour les cas particuliers (ex. repassage
+        seul).
+      </p>
       {pressing.soins.map((s) => {
         const tarif = pressing.tarifs.find((t) => t.soin_id === s.id)
         return (

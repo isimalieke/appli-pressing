@@ -447,9 +447,29 @@ async function listerCommandesClient(env, clientId) {
   return json(results)
 }
 
+// Vue de suivi simple pour le personnel (employé, gérant, propriétaire) : une ligne par commande
+// en cours, avec le nom du client et le nombre d'articles prêts sur le total — de quoi répondre
+// tout de suite à un client qui appelle pour savoir où en est son linge, sans avoir à ouvrir
+// chaque commande une par une.
 async function listerCommandesPressing(env, pressingId) {
   const { results } = await env.DB.prepare(
-    'SELECT * FROM commandes WHERE pressing_id = ? ORDER BY created_at DESC'
+    `SELECT
+       c.*,
+       u.nom AS client_nom, u.prenom AS client_prenom, u.telephone AS client_telephone,
+       (SELECT COUNT(*) FROM articles_commande WHERE commande_id = c.id) AS nb_articles,
+       (SELECT COUNT(*) FROM articles_commande a
+          WHERE a.commande_id = c.id
+            AND NOT EXISTS (
+              SELECT 1 FROM article_etapes e
+              WHERE e.article_commande_id = a.id AND e.statut != 'validee'
+            )
+            AND EXISTS (SELECT 1 FROM article_etapes e WHERE e.article_commande_id = a.id)
+       ) AS nb_articles_prets
+     FROM commandes c
+     JOIN clients cl ON cl.id = c.client_id
+     JOIN users u ON u.id = cl.user_id
+     WHERE c.pressing_id = ?
+     ORDER BY c.created_at DESC`
   ).bind(pressingId).all()
   return json(results)
 }

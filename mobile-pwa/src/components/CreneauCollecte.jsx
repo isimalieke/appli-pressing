@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { api, formaterJourCourt } from '../api.js'
+import { api, formaterJourCourt, formaterLabelCreneauCollecte } from '../api.js'
 
 // Affiche le créneau de collecte à domicile choisi, avec la possibilité de le changer tant que
 // la collecte n'a pas eu lieu (erreur de saisie, ou créneau devenu indisponible entre-temps).
@@ -44,7 +44,7 @@ export default function CreneauCollecte() {
       <div className="ligne-entre">
         <span style={{ fontSize: '0.85rem' }}>
           <i className="ti ti-truck" aria-hidden="true" style={{ marginRight: 6 }}></i>
-          Collecte : {commande.creneauCollectePrevue}
+          {formaterLabelCreneauCollecte(commande.creneauCollectePrevue)}
         </span>
         <button className="discret" style={{ fontSize: '0.75rem' }} onClick={() => setOuvert((v) => !v)}>
           {ouvert ? 'Annuler' : 'Modifier'}

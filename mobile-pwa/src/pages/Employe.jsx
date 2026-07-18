@@ -35,35 +35,63 @@ export default function Employe() {
     dispatch({ type: 'REVISER_CRENEAU', creneau: formaterCreneau(creneauChoisi) })
   }
 
+  // Une seule tâche visible à la fois : on prend le premier article qui a encore une étape
+  // "en_cours" et on n'affiche que celle-ci, en grand, avec un unique bouton d'action.
+  // Objectif : pas de liste à parcourir, pas de choix à faire — l'employé valide, l'écran
+  // passe automatiquement à la tâche suivante.
+  const articleActif = commande.articles.find((a) => a.etapes.some((e) => e.statut === 'en_cours'))
+  const etapeActive = articleActif?.etapes.find((e) => e.statut === 'en_cours')
+  const nbArticlesTermines = commande.articles.filter((a) => a.etapes.length > 0 && a.etapes.every((e) => e.statut === 'validee')).length
+
   return (
     <section>
       <h1>Commande #{commande.numeroTicket}</h1>
-      <p className="sous-titre">Vue employé — validation des étapes par poste, article par article.</p>
+      <p className="sous-titre">
+        Article {Math.min(nbArticlesTermines + 1, commande.articles.length)} / {commande.articles.length}
+      </p>
 
-      {commande.articles.map((a) => (
-        <div key={a.id} className="card">
-          <div className="ligne-entre">
-            <strong style={{ fontSize: '0.85rem' }}>{a.type} — {a.etiquette}</strong>
+      {articleActif && etapeActive ? (
+        <div className="card" style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+          <div style={{ color: 'var(--texte-muted)', fontSize: '0.8rem', marginBottom: 4 }}>
+            {articleActif.type} — {articleActif.etiquette}
           </div>
-          {a.etapes.map((e) => (
-            <div key={e.libelle} className="ligne-entre" style={{ padding: '6px 0', fontSize: '0.8rem' }}>
-              <span style={{ color: e.statut === 'validee' ? 'var(--vert)' : 'var(--texte)' }}>
-                {e.libelle}
-                {e.statut === 'validee' && e.horodatage && (
-                  <span style={{ color: 'var(--texte-muted)', fontSize: '0.7rem' }}> — {new Date(e.horodatage).toLocaleTimeString('fr-FR')}</span>
-                )}
+          <div style={{ fontFamily: 'var(--police-titre)', fontSize: '1.5rem', margin: '0.5rem 0 1.25rem' }}>
+            {etapeActive.libelle}
+          </div>
+          <button
+            className="primaire"
+            style={{ width: '100%', padding: '1rem', fontSize: '1.05rem' }}
+            onClick={() => valider(articleActif.id, etapeActive)}
+          >
+            Valider cette étape
+          </button>
+        </div>
+      ) : (
+        <div className="card" style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+          <span className="badge badge-succes" style={{ fontSize: '0.9rem' }}>Tous les articles sont prêts</span>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: '1rem' }}>
+        {commande.articles.map((a) => {
+          const termine = a.etapes.length > 0 && a.etapes.every((e) => e.statut === 'validee')
+          const enCours = a.id === articleActif?.id
+          return (
+            <div key={a.id} className="ligne-entre" style={{ fontSize: '0.75rem', padding: '4px 2px' }}>
+              <span style={{ color: enCours ? 'var(--texte)' : 'var(--texte-muted)' }}>
+                {a.type} — {a.etiquette}
               </span>
-              {e.statut === 'validee' ? (
-                <span className="badge badge-succes">Validée</span>
-              ) : e.statut === 'en_cours' ? (
-                <button onClick={() => valider(a.id, e)}>Valider cette étape</button>
+              {termine ? (
+                <span className="badge badge-succes">Prêt</span>
+              ) : enCours ? (
+                <span className="badge badge-neutre">En cours</span>
               ) : (
-                <span style={{ color: 'var(--texte-muted)' }}>À faire</span>
+                <span style={{ color: 'var(--texte-muted)' }}>En attente</span>
               )}
             </div>
-          ))}
-        </div>
-      ))}
+          )
+        })}
+      </div>
 
       <h2>Réviser le créneau de retrait</h2>
       <p className="sous-titre">Réservé au gérant ou à un employé habilité.</p>

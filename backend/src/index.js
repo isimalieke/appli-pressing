@@ -367,30 +367,40 @@ async function validerInventaire(env, commandeId) {
       continue
     }
 
-    // Fusionne les circuits associés aux soins de l'article (dédoublonnage par libellé, cf. docs/MODELE_DONNEES.md §5.1)
+    // Fusionne les circuits associés aux soins de l'article (dédoublonnage par libellé, cf. docs/MODELE_DONNEES.md §5.1).
+    // Le circuit d'un soin donné est déjà dans le bon ordre physique, mais fusionner plusieurs
+    // circuits dans l'ordre de sélection des soins peut casser cet ordre (ex. "Empaquetage" du
+    // premier soin choisi apparaissant avant "Détachage" d'un second soin). On re-trie donc
+    // l'ensemble fusionné par grande phase du parcours (poste_associe), pour garder un enchaînement
+    // physiquement cohérent quel que soit l'ordre de sélection des soins par le client.
     const { results: soinsArticle } = await env.DB.prepare(
       'SELECT soin_id FROM article_soins WHERE article_commande_id = ?'
     ).bind(article.id).all()
 
+    const rangPhase = { reception: 0, lavage: 1, nettoyage: 1, repassage: 2, controle: 3 }
+    const etapesFusionnees = []
     const etapesVues = new Set()
-    let ordre = 0
     for (const { soin_id } of soinsArticle) {
       const { results: circuits } = await env.DB.prepare(
         'SELECT circuit_id FROM soins_circuit WHERE soin_id = ?'
       ).bind(soin_id).all()
       for (const { circuit_id } of circuits) {
         const { results: etapes } = await env.DB.prepare(
-          'SELECT libelle FROM etapes_circuit WHERE circuit_id = ? ORDER BY ordre'
+          'SELECT libelle, poste_associe FROM etapes_circuit WHERE circuit_id = ? ORDER BY ordre'
         ).bind(circuit_id).all()
-        for (const { libelle } of etapes) {
+        for (const { libelle, poste_associe } of etapes) {
           if (etapesVues.has(libelle)) continue
           etapesVues.add(libelle)
-          await env.DB.prepare(
-            'INSERT INTO article_etapes (id, article_commande_id, ordre, libelle, statut) VALUES (?, ?, ?, ?, ?)'
-          ).bind(uid('etape'), article.id, ordre, libelle, ordre === 0 ? 'en_cours' : 'a_faire').run()
-          ordre += 1
+          etapesFusionnees.push({ libelle, rang: rangPhase[poste_associe] ?? 4 })
         }
       }
+    }
+    etapesFusionnees.sort((a, b) => a.rang - b.rang)
+
+    for (let ordre = 0; ordre < etapesFusionnees.length; ordre += 1) {
+      await env.DB.prepare(
+        'INSERT INTO article_etapes (id, article_commande_id, ordre, libelle, statut) VALUES (?, ?, ?, ?, ?)'
+      ).bind(uid('etape'), article.id, ordre, etapesFusionnees[ordre].libelle, ordre === 0 ? 'en_cours' : 'a_faire').run()
     }
   }
 

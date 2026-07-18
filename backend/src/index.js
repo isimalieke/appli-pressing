@@ -100,9 +100,9 @@ async function identifierClient(env, body) {
   if (!user) {
     const userId = uid('user')
     await env.DB.prepare(
-      `INSERT INTO users (id, telephone, mot_de_passe_hash, nom, prenom) VALUES (?, ?, 'x', ?, ?)`
-    ).bind(userId, telephone, body.nom || null, body.prenom || null).run()
-    user = { id: userId, nom: body.nom || null, prenom: body.prenom || null }
+      `INSERT INTO users (id, telephone, mot_de_passe_hash, nom, prenom, civilite) VALUES (?, ?, 'x', ?, ?, ?)`
+    ).bind(userId, telephone, body.nom || null, body.prenom || null, body.civilite || null).run()
+    user = { id: userId, nom: body.nom || null, prenom: body.prenom || null, civilite: body.civilite || null }
   }
 
   let client = await env.DB.prepare('SELECT * FROM clients WHERE user_id = ?').bind(user.id).first()
@@ -112,7 +112,7 @@ async function identifierClient(env, body) {
     client = { id: clientId }
   }
 
-  return json({ id: client.id, nom: user.nom, prenom: user.prenom, telephone })
+  return json({ id: client.id, nom: user.nom, prenom: user.prenom, civilite: user.civilite, telephone })
 }
 
 // --- Commandes ---------------------------------------------------------------

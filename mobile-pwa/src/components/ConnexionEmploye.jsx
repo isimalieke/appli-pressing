@@ -43,8 +43,8 @@ export default function ConnexionEmploye({ children }) {
 
   return (
     <section>
-      <h1>Connexion au poste de travail</h1>
-      <p className="sous-titre">Réservé au personnel du pressing — choisissez votre pressing et saisissez votre code.</p>
+      <h1>Connectez-vous</h1>
+      <p className="sous-titre">En tant que gérant, employé ou propriétaire — choisissez votre pressing et saisissez votre code PIN.</p>
 
       <form onSubmit={connecter}>
         <div className="card">

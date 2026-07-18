@@ -9,6 +9,8 @@ CREATE TABLE users (
   mot_de_passe_hash TEXT NOT NULL,
   nom TEXT,
   prenom TEXT,
+  -- Civilité (Monsieur/Madame), pour un accueil et des tickets plus personnalisés.
+  civilite TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

@@ -58,8 +58,8 @@ export const api = {
   listerCommandesPressing: (pressingId) => appel(`/pressings/${pressingId}/commandes`),
   connexionStaff: (pressingId, codePin) =>
     appel(`/pressings/${pressingId}/connexion-staff`, { method: 'POST', body: JSON.stringify({ code_pin: codePin }) }),
-  identifierClient: (telephone, nom, prenom) =>
-    appel('/clients/identification', { method: 'POST', body: JSON.stringify({ telephone, nom, prenom }) }),
+  identifierClient: (telephone, nom, prenom, civilite) =>
+    appel('/clients/identification', { method: 'POST', body: JSON.stringify({ telephone, nom, prenom, civilite }) }),
 }
 
 // Réduit une photo avant envoi, pour éviter des lignes trop volumineuses côté base de données.

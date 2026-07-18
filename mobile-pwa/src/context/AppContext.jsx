@@ -88,7 +88,7 @@ export function AppProvider({ children }) {
 
       case 'IDENTIFIER_CLIENT': {
         return actionAvecChargement(async () => {
-          const client = await api.identifierClient(action.telephone, action.nom, action.prenom)
+          const client = await api.identifierClient(action.telephone, action.nom, action.prenom, action.civilite)
           setClientSession(client)
           localStorage.setItem('pressing_client_session', JSON.stringify(client))
         })

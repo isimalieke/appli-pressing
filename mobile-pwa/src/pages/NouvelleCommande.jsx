@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { api, formaterJourCourt, formaterJoursOuverts } from '../api.js'
+import IdentificationClient from './IdentificationClient.jsx'
 
 export default function NouvelleCommande() {
-  const { pressingCourant, dispatch } = useApp()
+  const { state, pressingCourant, dispatch } = useApp()
   const navigate = useNavigate()
   const [mode, setMode] = useState('comptoir')
   const [modeFacturation, setModeFacturation] = useState('detail')
@@ -35,6 +36,12 @@ export default function NouvelleCommande() {
         <button className="primaire" onClick={() => navigate('/')}>Retour à l'accueil</button>
       </section>
     )
+  }
+
+  // Le pressing est choisi, mais le client n'est pas encore identifié : on demande son numéro
+  // avant de continuer, avec un accueil personnalisé au nom du pressing.
+  if (!state.clientSession) {
+    return <IdentificationClient pressingNom={pressingCourant.nom} />
   }
 
   const peutConfirmer = mode === 'comptoir' || !!creneauLabel

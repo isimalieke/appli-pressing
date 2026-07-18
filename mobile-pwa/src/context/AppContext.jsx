@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { api, CLIENT_ID_DEMO, normaliserCommande, normaliserPressing } from '../api.js'
+import { api, CLIENT_ID_DEMO, normaliserCommande, normaliserPressing, formaterMontant } from '../api.js'
 
 const AppContext = createContext(null)
 
@@ -54,12 +54,14 @@ export function AppProvider({ children }) {
             client_id: CLIENT_ID_DEMO,
             pressing_id: action.pressingId,
             mode_depot: action.modeDepot,
+            mode_facturation: action.modeFacturation,
             creneau_collecte_prevue: action.creneauCollectePrevue,
           })
           setCommande({
             id,
             pressingId: action.pressingId,
             statut: 'creee',
+            modeFacturation: action.modeFacturation || 'detail',
             articles: [],
             prixTotal: 0,
             montantAcompte: 0,
@@ -72,6 +74,13 @@ export function AppProvider({ children }) {
       case 'AJOUTER_ARTICLE': {
         return actionAvecChargement(async () => {
           await api.ajouterArticle(commande.id, { type_article: action.typeArticle })
+          await rafraichirCommande(commande.id)
+        })
+      }
+
+      case 'ENREGISTRER_POIDS': {
+        return actionAvecChargement(async () => {
+          await api.enregistrerPoids(commande.id, action.poidsKg)
           await rafraichirCommande(commande.id)
         })
       }
@@ -127,7 +136,7 @@ export function AppProvider({ children }) {
             moyen: action.moyen,
           })
           await rafraichirCommande(commande.id)
-          notifier(`Paiement ${action.typePaiement === 'acompte' ? "de l'acompte" : 'du solde'} confirmé : ${action.montant.toFixed(2)} EUR.`)
+          notifier(`Paiement ${action.typePaiement === 'acompte' ? "de l'acompte" : 'du solde'} confirmé : ${formaterMontant(action.montant, pressingCourant?.devise)}.`)
         })
       }
 

@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
+import { formaterMontant } from '../api.js'
 
 export default function TicketPapier() {
-  const { state } = useApp()
+  const { state, pressingCourant } = useApp()
   const navigate = useNavigate()
   const commande = state.commande
+  const devise = pressingCourant?.devise
 
   if (!commande || !commande.numeroTicket) {
     return (
@@ -31,7 +33,9 @@ export default function TicketPapier() {
         </div>
         {commande.articles.map((a) => (
           <div key={a.id} className="ligne-entre" style={{ fontSize: '0.8rem', marginTop: 6 }}>
-            <span>{a.type} — {a.soins.length} soin{a.soins.length > 1 ? 's' : ''}</span>
+            <span>
+              {a.type} — {commande.modeFacturation === 'kilo' ? `${commande.poidsKg} kg` : `${a.soins.length} soin${a.soins.length > 1 ? 's' : ''}`}
+            </span>
             {a.reserve ? (
               <span className="badge badge-attention">Réserve notée</span>
             ) : (
@@ -41,21 +45,21 @@ export default function TicketPapier() {
         ))}
         <div style={{ borderTop: '1px solid var(--gris-bordure)', marginTop: 10, paddingTop: 10 }} className="ligne-entre">
           <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>Total HT</span>
-          <span>{commande.montantHT.toFixed(2)} EUR</span>
+          <span>{formaterMontant(commande.montantHT, devise)}</span>
         </div>
         <div className="ligne-entre">
           <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>
             TVA ({commande.tauxTvaApplique}%)
           </span>
-          <span>{commande.montantTva.toFixed(2)} EUR</span>
+          <span>{formaterMontant(commande.montantTva, devise)}</span>
         </div>
         <div className="ligne-entre">
           <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>Total TTC</span>
-          <strong>{commande.prixTotal.toFixed(2)} EUR</strong>
+          <strong>{formaterMontant(commande.prixTotal, devise)}</strong>
         </div>
         <div className="ligne-entre" style={{ marginTop: 6 }}>
           <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>Acompte à régler</span>
-          <strong>{commande.montantAcompte.toFixed(2)} EUR</strong>
+          <strong>{formaterMontant(commande.montantAcompte, devise)}</strong>
         </div>
       </div>
 
@@ -70,7 +74,7 @@ export default function TicketPapier() {
       <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: '1.5rem' }}>
         <button onClick={() => window.print()}>Imprimer le ticket et les étiquettes</button>
         <button className="primaire" onClick={() => navigate('/paiement/acompte')}>
-          Payer l'acompte ({commande.montantAcompte.toFixed(2)} EUR)
+          Payer l'acompte ({formaterMontant(commande.montantAcompte, devise)})
         </button>
       </div>
     </section>

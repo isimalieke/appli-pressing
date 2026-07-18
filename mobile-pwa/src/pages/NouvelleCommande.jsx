@@ -7,6 +7,7 @@ export default function NouvelleCommande() {
   const { pressingCourant, dispatch } = useApp()
   const navigate = useNavigate()
   const [mode, setMode] = useState('comptoir')
+  const [modeFacturation, setModeFacturation] = useState('detail')
   const [creneauLabel, setCreneauLabel] = useState(null)
   const [creneauxDisponibles, setCreneauxDisponibles] = useState([])
   const [chargementCreneaux, setChargementCreneaux] = useState(false)
@@ -44,9 +45,10 @@ export default function NouvelleCommande() {
       type: 'DEMARRER_COMMANDE',
       pressingId: pressingCourant.id,
       modeDepot: mode,
+      modeFacturation,
       creneauCollectePrevue: mode === 'domicile' ? creneauLabel : null,
     })
-    navigate('/commande/soins')
+    navigate(modeFacturation === 'kilo' ? '/commande/kilo' : '/commande/soins')
   }
 
   return (
@@ -77,6 +79,34 @@ export default function NouvelleCommande() {
           Rayon de collecte : {pressingCourant.rayonCollecteKm} km autour du pressing
         </div>
       </div>
+
+      {pressingCourant.prixKilo > 0 && (
+        <>
+          <h2>Facturation</h2>
+          <div
+            className={`card card-selectionnable ${modeFacturation === 'detail' ? 'actif' : ''}`}
+            onClick={() => setModeFacturation('detail')}
+          >
+            <div className="ligne-entre">
+              <span><i className="ti ti-shirt" aria-hidden="true" style={{ marginRight: 6 }}></i>Au détail, pièce par pièce</span>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--texte-muted)', marginTop: 4 }}>
+              Chaque vêtement est étiqueté et suivi individuellement.
+            </div>
+          </div>
+          <div
+            className={`card card-selectionnable ${modeFacturation === 'kilo' ? 'actif' : ''}`}
+            onClick={() => setModeFacturation('kilo')}
+          >
+            <div className="ligne-entre">
+              <span><i className="ti ti-scale" aria-hidden="true" style={{ marginRight: 6 }}></i>Au kilo, en vrac</span>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--texte-muted)', marginTop: 4 }}>
+              Linge pesé et facturé en un seul lot — plus rapide pour un gros volume.
+            </div>
+          </div>
+        </>
+      )}
 
       {mode === 'comptoir' ? (
         <div className="card">

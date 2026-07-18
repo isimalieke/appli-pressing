@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { api, normaliserPressing, formaterCreneau, formaterCreneauDomicile, formaterJoursOuverts } from '../api.js'
+import { api, normaliserPressing, formaterCreneau, formaterCreneauDomicile, formaterJoursOuverts, formaterMontant } from '../api.js'
 
 export default function Gerant() {
   const { pressings } = useApp()
@@ -10,6 +10,10 @@ export default function Gerant() {
   const [creneauxDomicile, setCreneauxDomicile] = useState([])
   const [tauxTvaSaisi, setTauxTvaSaisi] = useState('')
   const [enregistrementTva, setEnregistrementTva] = useState(false)
+  const [prixKiloSaisi, setPrixKiloSaisi] = useState('')
+  const [enregistrementKilo, setEnregistrementKilo] = useState(false)
+  const [deviseSaisie, setDeviseSaisie] = useState('')
+  const [enregistrementDevise, setEnregistrementDevise] = useState(false)
 
   useEffect(() => {
     if (!pressingId && pressings.length) setPressingId(pressings[0].id)
@@ -21,6 +25,8 @@ export default function Gerant() {
       const p = normaliserPressing(d)
       setPressing(p)
       setTauxTvaSaisi(String(p.tauxTva))
+      setPrixKiloSaisi(String(p.prixKilo))
+      setDeviseSaisie(p.devise)
     })
     api.listerStaff(pressingId).then(setStaff)
     api.creneauxDomicile(pressingId).then(setCreneauxDomicile)
@@ -35,6 +41,30 @@ export default function Gerant() {
       setPressing((p) => ({ ...p, tauxTva: taux }))
     } finally {
       setEnregistrementTva(false)
+    }
+  }
+
+  async function enregistrerPrixKilo() {
+    const prix = Number(prixKiloSaisi)
+    if (Number.isNaN(prix) || prix < 0) return
+    setEnregistrementKilo(true)
+    try {
+      await api.definirPrixKilo(pressingId, prix)
+      setPressing((p) => ({ ...p, prixKilo: prix }))
+    } finally {
+      setEnregistrementKilo(false)
+    }
+  }
+
+  async function enregistrerDevise() {
+    const devise = deviseSaisie.trim().toUpperCase()
+    if (!/^[A-Z]{3}$/.test(devise)) return
+    setEnregistrementDevise(true)
+    try {
+      await api.definirDevise(pressingId, devise)
+      setPressing((p) => ({ ...p, devise }))
+    } finally {
+      setEnregistrementDevise(false)
     }
   }
 
@@ -58,16 +88,67 @@ export default function Gerant() {
         ))}
       </select>
 
+      <h2>Devise</h2>
+      <div className="card">
+        <p className="sous-titre" style={{ marginTop: 0 }}>
+          Code de la devise utilisée pour afficher tous les montants de ce pressing (ex. XOF, EUR, MAD).
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="text"
+            maxLength={3}
+            value={deviseSaisie}
+            onChange={(e) => setDeviseSaisie(e.target.value.toUpperCase())}
+            style={{ width: 80, textTransform: 'uppercase' }}
+          />
+          <button
+            className="primaire"
+            style={{ marginLeft: 'auto', padding: '6px 14px' }}
+            disabled={enregistrementDevise || deviseSaisie === pressing.devise}
+            onClick={enregistrerDevise}
+          >
+            {enregistrementDevise ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+
       <h2>Catalogue de soins et tarifs</h2>
       {pressing.soins.map((s) => {
         const tarif = pressing.tarifs.find((t) => t.soin_id === s.id)
         return (
           <div key={s.id} className="card ligne-entre">
             <span style={{ fontSize: '0.85rem' }}>{s.libelle}</span>
-            <strong>{tarif ? tarif.prix.toFixed(2) : '—'} EUR</strong>
+            <strong>{tarif ? formaterMontant(tarif.prix, pressing.devise) : '—'}</strong>
           </div>
         )
       })}
+
+      <h2>Linge au kilo</h2>
+      <div className="card">
+        <p className="sous-titre" style={{ marginTop: 0 }}>
+          Tarif TTC au kilo pour le linge déposé en vrac (facturation séparée du catalogue détaillé
+          ci-dessus). 0 tant que non renseigné : le dépôt au kilo n'est alors pas proposé au client.
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={prixKiloSaisi}
+            onChange={(e) => setPrixKiloSaisi(e.target.value)}
+            style={{ width: 90 }}
+          />
+          <span>/ kg</span>
+          <button
+            className="primaire"
+            style={{ marginLeft: 'auto', padding: '6px 14px' }}
+            disabled={enregistrementKilo || Number(prixKiloSaisi) === pressing.prixKilo}
+            onClick={enregistrerPrixKilo}
+          >
+            {enregistrementKilo ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
 
       <h2>Horaires d'ouverture</h2>
       <div className="card">
@@ -108,7 +189,7 @@ export default function Gerant() {
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Acompte</span><span>{pressing.acomptePourcent}% du total</span></div>
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Délai standard</span><span>{pressing.delaiStandardJoursOuvres} jour{pressing.delaiStandardJoursOuvres > 1 ? 's' : ''} ouvré{pressing.delaiStandardJoursOuvres > 1 ? 's' : ''}</span></div>
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Délai express</span><span>{pressing.delaiExpressJoursOuvres} jour{pressing.delaiExpressJoursOuvres > 1 ? 's' : ''} ouvré{pressing.delaiExpressJoursOuvres > 1 ? 's' : ''}</span></div>
-        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Frais de garde</span><span>{pressing.fraisGarde.montantParJour.toFixed(2)} EUR/jour après {pressing.fraisGarde.delaiGlobalJours} j</span></div>
+        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Frais de garde</span><span>{formaterMontant(pressing.fraisGarde.montantParJour, pressing.devise)}/jour après {pressing.fraisGarde.delaiGlobalJours} j</span></div>
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Rayon de collecte</span><span>{pressing.rayonCollecteKm} km</span></div>
       </div>
 
@@ -136,8 +217,9 @@ export default function Gerant() {
       ))}
 
       <p className="sous-titre">
-        Écran de démonstration : seul le taux de TVA est modifiable pour l'instant. La modification
-        des soins, tarifs, créneaux et employés n'est pas encore branchée (lecture seule).
+        Écran de démonstration : la devise, le taux de TVA et le tarif au kilo sont modifiables.
+        La modification des soins, tarifs détaillés, créneaux et employés n'est pas encore
+        branchée (lecture seule).
       </p>
     </section>
   )

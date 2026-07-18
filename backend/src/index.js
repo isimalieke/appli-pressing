@@ -78,17 +78,69 @@ async function listerStaff(env, pressingId) {
 // --- Commandes ---------------------------------------------------------------
 
 async function creerCommande(env, body) {
-  const { client_id, pressing_id, mode_depot, creneau_collecte_prevue, express } = body
+  const { client_id, pressing_id, mode_depot, creneau_collecte_prevue, express, mode_facturation } = body
   if (!client_id || !pressing_id || !mode_depot) return erreur('client_id, pressing_id et mode_depot sont requis')
   if (mode_depot === 'domicile' && !creneau_collecte_prevue) {
     return erreur('creneau_collecte_prevue requis pour une collecte à domicile')
   }
+  const facturation = mode_facturation === 'kilo' ? 'kilo' : 'detail'
   const id = uid('cmd')
   await env.DB.prepare(
-    `INSERT INTO commandes (id, client_id, pressing_id, mode_depot, creneau_collecte_prevue, express, statut)
-     VALUES (?, ?, ?, ?, ?, ?, 'creee')`
-  ).bind(id, client_id, pressing_id, mode_depot, creneau_collecte_prevue || null, express ? 1 : 0).run()
-  return json({ id }, 201)
+    `INSERT INTO commandes (id, client_id, pressing_id, mode_depot, mode_facturation, creneau_collecte_prevue, express, statut)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'creee')`
+  ).bind(id, client_id, pressing_id, mode_depot, facturation, creneau_collecte_prevue || null, express ? 1 : 0).run()
+  return json({ id, mode_facturation: facturation }, 201)
+}
+
+// Circuit générique fixe pour le linge facturé au kilo (pas de configuration par soin, puisque
+// le lot n'est pas rattaché à un soin précis) : dépôt/pesée → lavage → séchage → pliage → sortie.
+const ETAPES_KILO = ['Dépôt et pesée', 'Lavage', 'Séchage', 'Pliage', 'Empaquetage']
+
+// Enregistre le poids du linge en vrac et calcule le prix (poids × tarif/kg du pressing).
+// Crée (une seule fois) l'article synthétique qui porte l'étiquette unique du lot et son circuit,
+// pour réutiliser telles quelles les écrans/étapes déjà construits pour le suivi pièce par pièce.
+async function enregistrerPoidsKilo(env, commandeId, body) {
+  const poidsKg = Number(body.poids_kg)
+  if (!poidsKg || poidsKg <= 0) return erreur('poids_kg doit être un nombre positif')
+
+  const commande = await env.DB.prepare('SELECT * FROM commandes WHERE id = ?').bind(commandeId).first()
+  if (!commande) return erreur('Commande introuvable', 404)
+  if (commande.mode_facturation !== 'kilo') return erreur('Cette commande n\'est pas en mode facturation au kilo')
+
+  const pressing = await env.DB.prepare('SELECT prix_kilo, acompte_pourcent, taux_tva FROM pressings WHERE id = ?').bind(commande.pressing_id).first()
+
+  let article = await env.DB.prepare('SELECT * FROM articles_commande WHERE commande_id = ? LIMIT 1').bind(commandeId).first()
+  if (!article) {
+    const articleId = uid('art')
+    await env.DB.prepare(
+      'INSERT INTO articles_commande (id, commande_id, type_article, description) VALUES (?, ?, ?, ?)'
+    ).bind(articleId, commandeId, 'Linge au kilo', null).run()
+    article = { id: articleId }
+  }
+
+  const totalTTC = Math.round(poidsKg * (pressing.prix_kilo || 0) * 100) / 100
+  const tauxTva = pressing.taux_tva || 0
+  const montantHT = Math.round((totalTTC / (1 + tauxTva / 100)) * 100) / 100
+  const montantTva = Math.round((totalTTC - montantHT) * 100) / 100
+  const acompte = Math.round(totalTTC * (pressing.acompte_pourcent / 100) * 100) / 100
+
+  await env.DB.prepare(
+    `UPDATE commandes
+     SET poids_kg = ?, prix_total = ?, montant_ht = ?, montant_tva = ?, taux_tva_applique = ?,
+         montant_acompte = ?, montant_solde = ?, updated_at = datetime('now')
+     WHERE id = ?`
+  ).bind(poidsKg, totalTTC, montantHT, montantTva, tauxTva, acompte, Math.round((totalTTC - acompte) * 100) / 100, commandeId).run()
+
+  return json({ ok: true, prix_total: totalTTC, article_id: article.id })
+}
+
+// Permet au propriétaire/gérant de définir le tarif au kilo (0 tant que non renseigné —
+// le pressing n'accepte alors pas de dépôt en mode kilo côté client).
+async function definirPrixKilo(env, pressingId, body) {
+  const prix = Number(body.prix_kilo)
+  if (Number.isNaN(prix) || prix < 0) return erreur('prix_kilo doit être un nombre positif ou nul')
+  await env.DB.prepare('UPDATE pressings SET prix_kilo = ? WHERE id = ?').bind(prix, pressingId).run()
+  return json({ ok: true, prix_kilo: prix })
 }
 
 // Génère les créneaux de collecte à domicile disponibles sur une fenêtre glissante de 7 jours,
@@ -213,6 +265,15 @@ async function definirTauxTva(env, pressingId, body) {
   return json({ ok: true, taux_tva: taux })
 }
 
+// Permet au propriétaire/gérant de définir la devise d'affichage (code ISO 4217, ex. XOF, EUR),
+// puisque le propriétaire peut avoir des pressings dans des pays différents.
+async function definirDevise(env, pressingId, body) {
+  const devise = String(body.devise || '').trim().toUpperCase()
+  if (!/^[A-Z]{3}$/.test(devise)) return erreur('devise doit être un code ISO 4217 à 3 lettres (ex. XOF, EUR)')
+  await env.DB.prepare('UPDATE pressings SET devise = ? WHERE id = ?').bind(devise, pressingId).run()
+  return json({ ok: true, devise })
+}
+
 // Suppression d'un article ajouté par erreur. Autorisée uniquement avant validation de
 // l'inventaire (commande encore au statut 'creee') : au-delà, l'étiquette a pu être imprimée
 // et agrafée au vêtement, donc la composition de la commande ne doit plus changer côté client.
@@ -260,6 +321,18 @@ async function validerInventaire(env, commandeId) {
     const etiquette = `${numeroTicket}-${index}/${articles.length}`
     await env.DB.prepare('UPDATE articles_commande SET etiquette = ? WHERE id = ?').bind(etiquette, article.id).run()
 
+    await env.DB.prepare('DELETE FROM article_etapes WHERE article_commande_id = ?').bind(article.id).run()
+
+    if (commande.mode_facturation === 'kilo') {
+      // Circuit générique fixe (pas de soins à combiner pour un lot en vrac).
+      for (let ordre = 0; ordre < ETAPES_KILO.length; ordre += 1) {
+        await env.DB.prepare(
+          'INSERT INTO article_etapes (id, article_commande_id, ordre, libelle, statut) VALUES (?, ?, ?, ?, ?)'
+        ).bind(uid('etape'), article.id, ordre, ETAPES_KILO[ordre], ordre === 0 ? 'en_cours' : 'a_faire').run()
+      }
+      continue
+    }
+
     // Fusionne les circuits associés aux soins de l'article (dédoublonnage par libellé, cf. docs/MODELE_DONNEES.md §5.1)
     const { results: soinsArticle } = await env.DB.prepare(
       'SELECT soin_id FROM article_soins WHERE article_commande_id = ?'
@@ -267,7 +340,6 @@ async function validerInventaire(env, commandeId) {
 
     const etapesVues = new Set()
     let ordre = 0
-    await env.DB.prepare('DELETE FROM article_etapes WHERE article_commande_id = ?').bind(article.id).run()
     for (const { soin_id } of soinsArticle) {
       const { results: circuits } = await env.DB.prepare(
         'SELECT circuit_id FROM soins_circuit WHERE soin_id = ?'
@@ -415,6 +487,8 @@ export default {
       if (segments[0] === 'pressings' && segments[2] === 'staff' && method === 'GET') return listerStaff(env, segments[1])
       if (segments[0] === 'pressings' && segments[2] === 'creneaux-domicile' && method === 'GET') return creneauxDomicileDisponibles(env, segments[1])
       if (segments[0] === 'pressings' && segments[2] === 'taux-tva' && method === 'PATCH') return definirTauxTva(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'pressings' && segments[2] === 'prix-kilo' && method === 'PATCH') return definirPrixKilo(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'pressings' && segments[2] === 'devise' && method === 'PATCH') return definirDevise(env, segments[1], await lireJSON(request))
       if (segments[0] === 'pressings' && segments[2] === 'commandes' && method === 'GET') return listerCommandesPressing(env, segments[1])
 
       if (segments[0] === 'clients' && segments[2] === 'commandes' && method === 'GET') return listerCommandesClient(env, segments[1])
@@ -422,6 +496,7 @@ export default {
       if (segments[0] === 'commandes' && segments.length === 1 && method === 'POST') return creerCommande(env, await lireJSON(request))
       if (segments[0] === 'commandes' && segments.length === 2 && method === 'GET') return detailCommande(env, segments[1])
       if (segments[0] === 'commandes' && segments[2] === 'articles' && method === 'POST') return ajouterArticle(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'poids' && method === 'PATCH') return enregistrerPoidsKilo(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'valider-inventaire' && method === 'POST') return validerInventaire(env, segments[1])
       if (segments[0] === 'commandes' && segments[2] === 'creneau-retrait' && method === 'PATCH') return reviserCreneau(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'evaluation' && method === 'PATCH') return noterCommande(env, segments[1], await lireJSON(request))

@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { moyensPaiement } from '../data/mock.js'
+import { formaterMontant } from '../api.js'
 
 export default function Paiement() {
   const { type } = useParams() // 'acompte' ou 'solde'
-  const { state, dispatch } = useApp()
+  const { state, dispatch, pressingCourant } = useApp()
   const navigate = useNavigate()
   const commande = state.commande
+  const devise = pressingCourant?.devise
   const [moyen, setMoyen] = useState('orange_money')
 
   if (!commande) {
@@ -33,7 +35,7 @@ export default function Paiement() {
   return (
     <section>
       <h1>Paiement {type === 'solde' ? 'du solde' : "de l'acompte"}</h1>
-      <p className="sous-titre">{montant.toFixed(2)} EUR sur {commande.prixTotal.toFixed(2)} EUR</p>
+      <p className="sous-titre">{formaterMontant(montant, devise)} sur {formaterMontant(commande.prixTotal, devise)}</p>
 
       {moyensPaiement.map((m) => (
         <label
@@ -67,7 +69,7 @@ export default function Paiement() {
       <p className="sous-titre">Confirmation envoyée par WhatsApp et SMS, même sans l'application.</p>
 
       <button className="primaire" onClick={payer}>
-        Payer {montant.toFixed(2)} EUR
+        Payer {formaterMontant(montant, devise)}
       </button>
     </section>
   )

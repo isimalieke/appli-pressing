@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { typesArticle } from '../data/mock.js'
+import { formaterMontant } from '../api.js'
 
 export default function ChoixSoins() {
   const { state, dispatch, pressingCourant } = useApp()
@@ -86,7 +87,7 @@ export default function ChoixSoins() {
                     />
                     {soin.libelle}
                   </span>
-                  <span>{tarif ? tarif.prix.toFixed(2) : '—'} EUR</span>
+                  <span>{tarif ? formaterMontant(tarif.prix, pressingCourant.devise) : '—'}</span>
                 </label>
               )
             })}
@@ -100,13 +101,13 @@ export default function ChoixSoins() {
             <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>
               Total ({commande.articles.length} article{commande.articles.length > 1 ? 's' : ''})
             </span>
-            <strong>{commande.prixTotal.toFixed(2)} EUR</strong>
+            <strong>{formaterMontant(commande.prixTotal, pressingCourant.devise)}</strong>
           </div>
           <div className="ligne-entre">
             <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>
               Acompte à payer ({pressingCourant.acomptePourcent}%)
             </span>
-            <strong>{commande.montantAcompte.toFixed(2)} EUR</strong>
+            <strong>{formaterMontant(commande.montantAcompte, pressingCourant.devise)}</strong>
           </div>
         </div>
       )}

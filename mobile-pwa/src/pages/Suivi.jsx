@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
+import { formaterMontant } from '../api.js'
 
 const JALONS = [
   { cle: 'deposee', libelle: 'Déposée et inventoriée' },
@@ -15,9 +16,10 @@ function indexStatut(statut) {
 }
 
 export default function Suivi() {
-  const { state } = useApp()
+  const { state, pressingCourant } = useApp()
   const navigate = useNavigate()
   const commande = state.commande
+  const devise = pressingCourant?.devise
   const [detailOuvert, setDetailOuvert] = useState(false)
 
   if (!commande || !commande.numeroTicket) {
@@ -81,7 +83,7 @@ export default function Suivi() {
 
       {commande.statut === 'prete' && commande.montantSolde > 0 && !commande.paiements.some((p) => p.type === 'solde') && (
         <button className="primaire" style={{ marginTop: '1rem' }} onClick={() => navigate('/paiement/solde')}>
-          Payer le solde ({commande.montantSolde.toFixed(2)} EUR)
+          Payer le solde ({formaterMontant(commande.montantSolde, devise)})
         </button>
       )}
     </section>

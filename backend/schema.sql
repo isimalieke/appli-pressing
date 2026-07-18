@@ -42,6 +42,12 @@ CREATE TABLE pressings (
   -- ex. 18% au Sénégal). 0 par défaut tant qu'il n'est pas renseigné. Les prix du catalogue
   -- (table tarifs) sont saisis TTC ; le HT est déduit à partir de ce taux.
   taux_tva REAL NOT NULL DEFAULT 0,
+  -- Prix TTC au kilo pour le linge facturé en vrac (mode 'kilo' des commandes), plutôt qu'à la
+  -- pièce. 0 tant que le gérant ne l'a pas configuré.
+  prix_kilo REAL NOT NULL DEFAULT 0,
+  -- Devise d'affichage des montants (code ISO 4217, ex. XOF pour le Sénégal, EUR). Le propriétaire
+  -- peut avoir des pressings dans des pays différents, donc paramétrable par pressing.
+  devise TEXT NOT NULL DEFAULT 'XOF',
   statut TEXT NOT NULL DEFAULT 'actif',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -118,6 +124,10 @@ CREATE TABLE commandes (
   client_id TEXT NOT NULL REFERENCES clients(id),
   pressing_id TEXT NOT NULL REFERENCES pressings(id),
   numero_ticket TEXT UNIQUE,
+  -- 'detail' : suivi pièce par pièce (étiquette par vêtement, comme aujourd'hui).
+  -- 'kilo' : linge en vrac facturé au poids, une seule étiquette pour le lot entier.
+  mode_facturation TEXT NOT NULL DEFAULT 'detail' CHECK (mode_facturation IN ('detail', 'kilo')),
+  poids_kg REAL,
   mode_depot TEXT NOT NULL CHECK (mode_depot IN ('comptoir', 'domicile')),
   mode_retrait TEXT CHECK (mode_retrait IN ('comptoir', 'domicile')),
   creneau_depot_id TEXT REFERENCES creneaux(id),

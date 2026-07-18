@@ -25,9 +25,15 @@ export const api = {
   creneauxDomicile: (pressingId) => appel(`/pressings/${pressingId}/creneaux-domicile`),
   definirTauxTva: (pressingId, tauxTva) =>
     appel(`/pressings/${pressingId}/taux-tva`, { method: 'PATCH', body: JSON.stringify({ taux_tva: tauxTva }) }),
+  definirPrixKilo: (pressingId, prixKilo) =>
+    appel(`/pressings/${pressingId}/prix-kilo`, { method: 'PATCH', body: JSON.stringify({ prix_kilo: prixKilo }) }),
+  definirDevise: (pressingId, devise) =>
+    appel(`/pressings/${pressingId}/devise`, { method: 'PATCH', body: JSON.stringify({ devise }) }),
 
   creerCommande: (payload) => appel('/commandes', { method: 'POST', body: JSON.stringify(payload) }),
   detailCommande: (id) => appel(`/commandes/${id}`),
+  enregistrerPoids: (commandeId, poidsKg) =>
+    appel(`/commandes/${commandeId}/poids`, { method: 'PATCH', body: JSON.stringify({ poids_kg: poidsKg }) }),
   ajouterArticle: (commandeId, payload) =>
     appel(`/commandes/${commandeId}/articles`, { method: 'POST', body: JSON.stringify(payload) }),
   supprimerArticle: (articleId) => appel(`/articles/${articleId}`, { method: 'DELETE' }),
@@ -82,6 +88,8 @@ export function normaliserCommande(c) {
     clientId: c.client_id,
     numeroTicket: c.numero_ticket,
     modeDepot: c.mode_depot,
+    modeFacturation: c.mode_facturation || 'detail',
+    poidsKg: c.poids_kg,
     express: !!c.express,
     statut: c.statut,
     prixTotal: c.prix_total || 0,
@@ -130,6 +138,8 @@ export function normaliserPressing(p) {
     rayonCollecteKm: p.rayon_collecte_km,
     acomptePourcent: p.acompte_pourcent,
     tauxTva: p.taux_tva || 0,
+    prixKilo: p.prix_kilo || 0,
+    devise: p.devise || 'XOF',
     delaiStandardH: p.delai_standard_h,
     delaiExpressH: p.delai_express_h,
     delaiStandardJoursOuvres: p.delai_standard_jours_ouvres ?? 2,
@@ -157,6 +167,16 @@ export function formaterJoursOuverts(jours) {
     return `${NOMS_JOURS[tries[0]]} à ${NOMS_JOURS[tries[tries.length - 1]]}`
   }
   return tries.map((j) => NOMS_JOURS[j]).join(', ')
+}
+
+// Formate un montant dans la devise du pressing (ex. 1 500 XOF, 3,50 EUR). Intl.NumberFormat gère
+// automatiquement le nombre de décimales propre à chaque devise (0 pour XOF, 2 pour EUR...).
+export function formaterMontant(montant, devise = 'XOF') {
+  try {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: devise }).format(montant || 0)
+  } catch {
+    return `${(montant || 0).toFixed(2)} ${devise}`
+  }
 }
 
 export function formaterCreneau(c) {

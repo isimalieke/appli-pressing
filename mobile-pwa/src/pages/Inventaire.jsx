@@ -47,9 +47,13 @@ export default function Inventaire() {
         <div key={article.id} className="card">
           <div className="ligne-entre">
             <strong style={{ fontSize: '0.85rem' }}>{article.type}</strong>
-            <span style={{ fontSize: '0.7rem', color: 'var(--texte-muted)' }}>
-              {article.soins.length} soin{article.soins.length > 1 ? 's' : ''}
-            </span>
+            {commande.modeFacturation === 'kilo' ? (
+              <span style={{ fontSize: '0.7rem', color: 'var(--texte-muted)' }}>{commande.poidsKg} kg</span>
+            ) : (
+              <span style={{ fontSize: '0.7rem', color: 'var(--texte-muted)' }}>
+                {article.soins.length} soin{article.soins.length > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
 
           <textarea

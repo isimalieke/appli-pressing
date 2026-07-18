@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { api } from '../api.js'
+import { api, formaterMontant } from '../api.js'
 
 export default function Proprietaire() {
   const { pressings } = useApp()
@@ -17,7 +17,7 @@ export default function Proprietaire() {
   }, [pressings])
 
   const totalCommandes = Object.values(kpiParPressing).reduce((s, k) => s + k.commandes, 0)
-  const totalCa = Object.values(kpiParPressing).reduce((s, k) => s + k.ca, 0)
+  const devisesDistinctes = new Set(pressings.map((p) => p.devise || 'XOF')).size > 1
 
   return (
     <section>
@@ -26,8 +26,13 @@ export default function Proprietaire() {
 
       <div className="card">
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Commandes (tous pressings)</span><strong>{totalCommandes}</strong></div>
-        <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Chiffre d'affaires cumulé</span><strong>{totalCa.toFixed(2)} EUR</strong></div>
       </div>
+      {devisesDistinctes && (
+        <p className="sous-titre">
+          Le chiffre d'affaires cumulé n'est pas affiché car vos pressings utilisent des devises
+          différentes — voir le détail par pressing ci-dessous.
+        </p>
+      )}
 
       <h2>Par pressing</h2>
       {pressings.map((p) => {
@@ -40,7 +45,7 @@ export default function Proprietaire() {
             </div>
             <div style={{ fontSize: '0.8rem', marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Commandes</span><span>{kpi.commandes}</span></div>
-              <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Chiffre d'affaires</span><span>{kpi.ca.toFixed(2)} EUR</span></div>
+              <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Chiffre d'affaires</span><span>{formaterMontant(kpi.ca, p.devise)}</span></div>
               <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Linge non récupéré</span><span>{kpi.nonRecupere}</span></div>
             </div>
           </div>

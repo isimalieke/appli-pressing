@@ -2,6 +2,7 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Accueil from './pages/Accueil.jsx'
 import NouvelleCommande from './pages/NouvelleCommande.jsx'
 import ChoixSoins from './pages/ChoixSoins.jsx'
+import Kilo from './pages/Kilo.jsx'
 import Inventaire from './pages/Inventaire.jsx'
 import TicketPapier from './pages/TicketPapier.jsx'
 import Paiement from './pages/Paiement.jsx'
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/" element={<Accueil />} />
           <Route path="/nouvelle-commande" element={<NouvelleCommande />} />
           <Route path="/commande/soins" element={<ChoixSoins />} />
+          <Route path="/commande/kilo" element={<Kilo />} />
           <Route path="/commande/inventaire" element={<Inventaire />} />
           <Route path="/commande/ticket" element={<TicketPapier />} />
           <Route path="/commande/suivi" element={<Suivi />} />

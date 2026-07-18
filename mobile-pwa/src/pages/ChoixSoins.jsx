@@ -24,6 +24,10 @@ export default function ChoixSoins() {
     dispatch({ type: 'TOGGLE_SOIN', articleId, soinId })
   }
 
+  function retirerArticle(articleId) {
+    dispatch({ type: 'RETIRER_ARTICLE', articleId })
+  }
+
   const peutContinuer =
     commande.articles.length > 0 && commande.articles.every((a) => a.soins.length > 0)
 
@@ -48,6 +52,13 @@ export default function ChoixSoins() {
         <div key={article.id} className="card">
           <div className="ligne-entre">
             <strong style={{ fontSize: '0.85rem' }}>{article.type}</strong>
+            <button
+              className="discret"
+              style={{ color: 'var(--rouge)', padding: '2px 4px', fontSize: '0.75rem' }}
+              onClick={() => retirerArticle(article.id)}
+            >
+              <i className="ti ti-trash" aria-hidden="true" style={{ marginRight: 4 }}></i>Retirer
+            </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
             {pressingCourant.soins.map((soin) => {

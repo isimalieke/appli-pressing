@@ -1,19 +1,26 @@
 :root {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color-scheme: light;
-  --bleu: #1e3a5f;
-  --bleu-clair: #e6f1fb;
-  --vert: #0f6e56;
-  --vert-clair: #e1f5ee;
-  --ambre: #854f0b;
-  --ambre-clair: #faeeda;
-  --rouge: #a32d2d;
-  --rouge-clair: #fcebeb;
-  --gris-fond: #f5f6f8;
+
+  /* Palette haut de gamme : bleu nuit + blanc, touche or discrète pour les accents. */
+  --bleu: #0d1b2a;
+  --bleu-nuit-clair: #16283d;
+  --bleu-clair: #eef1f5;
+  --or: #a9884f;
+  --or-clair: #f6efe0;
+  --vert: #1f5e4d;
+  --vert-clair: #e8f2ee;
+  --ambre: #8a5a1f;
+  --ambre-clair: #f7efdf;
+  --rouge: #8c3232;
+  --rouge-clair: #f6ebeb;
+  --gris-fond: #f8f7f4;
   --gris-carte: #ffffff;
-  --gris-bordure: #e2e2e0;
-  --texte: #1a1a1a;
-  --texte-muted: #6b6b68;
+  --gris-bordure: #e4e1d8;
+  --texte: #17202b;
+  --texte-muted: #6f6a5f;
+
+  --police-titre: 'Playfair Display', Georgia, serif;
 }
 
 * {
@@ -24,6 +31,7 @@ body {
   margin: 0;
   background: var(--gris-fond);
   color: var(--texte);
+  -webkit-font-smoothing: antialiased;
 }
 
 .app {
@@ -37,7 +45,7 @@ body {
 
 .app-content {
   flex: 1;
-  padding: 1rem 1rem 5rem;
+  padding: 1.25rem 1.25rem 5.5rem;
 }
 
 .app-nav {
@@ -49,57 +57,67 @@ body {
   max-width: 480px;
   display: flex;
   justify-content: space-around;
-  background: var(--gris-carte);
-  border-top: 1px solid var(--gris-bordure);
-  padding: 0.6rem 0;
+  background: var(--bleu);
+  border-top: 1px solid var(--bleu-nuit-clair);
+  padding: 0.7rem 0;
 }
 
 .app-nav a {
-  color: var(--texte-muted);
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .app-nav a.actif {
-  color: var(--bleu);
+  color: var(--or);
 }
 
 h1 {
-  font-size: 1.25rem;
+  font-family: var(--police-titre);
+  font-size: 1.5rem;
   font-weight: 600;
-  margin: 0 0 0.25rem;
+  letter-spacing: 0.01em;
+  margin: 0 0 0.3rem;
+  color: var(--bleu);
 }
 
 h2 {
-  font-size: 1rem;
+  font-family: var(--police-titre);
+  font-size: 1.1rem;
   font-weight: 600;
-  margin: 1rem 0 0.5rem;
+  margin: 1.4rem 0 0.6rem;
+  color: var(--bleu);
 }
 
 p.sous-titre {
   color: var(--texte-muted);
   font-size: 0.85rem;
-  margin: 0 0 1rem;
+  line-height: 1.5;
+  margin: 0 0 1.1rem;
 }
 
 .card {
   background: var(--gris-carte);
   border: 1px solid var(--gris-bordure);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  margin-bottom: 0.6rem;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.7rem;
+  box-shadow: 0 1px 2px rgba(13, 27, 42, 0.04);
 }
 
 .card-selectionnable {
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card-selectionnable.actif {
-  border: 2px solid var(--bleu);
+  border: 1.5px solid var(--bleu);
+  box-shadow: 0 2px 8px rgba(13, 27, 42, 0.1);
 }
 
 .ligne-entre {
@@ -109,26 +127,29 @@ p.sous-titre {
 }
 
 .badge {
-  font-size: 0.7rem;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 500;
+  font-size: 0.68rem;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .badge-succes { background: var(--vert-clair); color: var(--vert); }
 .badge-attention { background: var(--ambre-clair); color: var(--ambre); }
 .badge-danger { background: var(--rouge-clair); color: var(--rouge); }
-.badge-neutre { background: var(--bleu-clair); color: var(--bleu); }
+.badge-neutre { background: var(--or-clair); color: var(--or); }
 
 button, .btn {
   font-family: inherit;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  padding: 0.65rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 0.7rem 1.1rem;
   border: 1px solid var(--gris-bordure);
   background: var(--gris-carte);
   color: var(--texte);
   cursor: pointer;
+  transition: opacity 0.15s ease;
 }
 
 button.primaire {
@@ -136,32 +157,45 @@ button.primaire {
   color: white;
   border: none;
   width: 100%;
+  letter-spacing: 0.02em;
+}
+
+button.primaire:hover:not(:disabled) {
+  background: var(--bleu-nuit-clair);
 }
 
 button.primaire:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 button.discret {
   background: transparent;
   border: none;
-  color: var(--bleu);
+  color: var(--or);
   padding: 0.4rem;
+  font-weight: 600;
 }
 
-textarea, input[type="text"] {
+textarea, input[type="text"], input[type="number"], input[type="email"], select {
   width: 100%;
   font-family: inherit;
   font-size: 0.9rem;
-  padding: 0.5rem;
-  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  border-radius: 9px;
   border: 1px solid var(--gris-bordure);
+  background: var(--gris-carte);
+  color: var(--texte);
+}
+
+textarea:focus, input:focus, select:focus {
+  outline: none;
+  border-color: var(--or);
 }
 
 .timeline-item {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .timeline-point {
@@ -177,8 +211,8 @@ textarea, input[type="text"] {
 }
 
 .timeline-point.validee {
-  background: var(--vert);
-  border-color: var(--vert);
+  background: var(--or);
+  border-color: var(--or);
   color: white;
 }
 
@@ -198,12 +232,13 @@ textarea, input[type="text"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--bleu-clair);
-  color: var(--bleu);
+  background: var(--bleu);
+  color: white;
   border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 0.8rem;
+  padding: 6px 11px;
+  font-size: 0.78rem;
   font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .vignette-photo {
@@ -229,9 +264,10 @@ textarea, input[type="text"] {
 }
 
 .notif-whatsapp {
-  background: #dcf8c6;
+  background: var(--vert-clair);
+  color: var(--vert);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 9px 11px;
   font-size: 0.8rem;
   margin-bottom: 6px;
 }
@@ -240,7 +276,7 @@ textarea, input[type="text"] {
   background: var(--ambre-clair);
   color: var(--ambre);
   font-size: 0.75rem;
-  padding: 6px 10px;
+  padding: 7px 11px;
   border-radius: 8px;
   margin-bottom: 0.75rem;
 }

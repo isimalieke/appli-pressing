@@ -23,11 +23,14 @@ export const api = {
   detailPressing: (id) => appel(`/pressings/${id}`),
   listerStaff: (pressingId) => appel(`/pressings/${pressingId}/staff`),
   creneauxDomicile: (pressingId) => appel(`/pressings/${pressingId}/creneaux-domicile`),
+  definirTauxTva: (pressingId, tauxTva) =>
+    appel(`/pressings/${pressingId}/taux-tva`, { method: 'PATCH', body: JSON.stringify({ taux_tva: tauxTva }) }),
 
   creerCommande: (payload) => appel('/commandes', { method: 'POST', body: JSON.stringify(payload) }),
   detailCommande: (id) => appel(`/commandes/${id}`),
   ajouterArticle: (commandeId, payload) =>
     appel(`/commandes/${commandeId}/articles`, { method: 'POST', body: JSON.stringify(payload) }),
+  supprimerArticle: (articleId) => appel(`/articles/${articleId}`, { method: 'DELETE' }),
   definirSoinsArticle: (articleId, soinIds) =>
     appel(`/articles/${articleId}/soins`, { method: 'PUT', body: JSON.stringify({ soin_ids: soinIds }) }),
   definirReserve: (articleId, reserve) =>
@@ -82,6 +85,9 @@ export function normaliserCommande(c) {
     express: !!c.express,
     statut: c.statut,
     prixTotal: c.prix_total || 0,
+    montantHT: c.montant_ht || 0,
+    montantTva: c.montant_tva || 0,
+    tauxTvaApplique: c.taux_tva_applique || 0,
     montantAcompte: c.montant_acompte || 0,
     montantSolde: c.montant_solde || 0,
     dateDepotEffectif: c.date_depot_effectif,
@@ -123,6 +129,7 @@ export function normaliserPressing(p) {
     adresse: p.adresse,
     rayonCollecteKm: p.rayon_collecte_km,
     acomptePourcent: p.acompte_pourcent,
+    tauxTva: p.taux_tva || 0,
     delaiStandardH: p.delai_standard_h,
     delaiExpressH: p.delai_express_h,
     delaiStandardJoursOuvres: p.delai_standard_jours_ouvres ?? 2,

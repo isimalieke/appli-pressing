@@ -12,7 +12,7 @@ export default defineConfig({
         name: 'Appli Pressing',
         short_name: 'Pressing',
         description: 'Gestion et suivi de commandes de pressing',
-        theme_color: '#1e3a5f',
+        theme_color: '#0d1b2a',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

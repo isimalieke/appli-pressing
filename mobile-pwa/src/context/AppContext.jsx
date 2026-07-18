@@ -77,8 +77,10 @@ export function AppProvider({ children }) {
       }
 
       case 'RETIRER_ARTICLE': {
-        // Non pris en charge côté API pour l'instant (suppression après création) — limitation connue.
-        return
+        return actionAvecChargement(async () => {
+          await api.supprimerArticle(action.articleId)
+          await rafraichirCommande(commande.id)
+        })
       }
 
       case 'TOGGLE_SOIN': {

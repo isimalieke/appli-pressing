@@ -12,7 +12,9 @@
     "db:migrate:horaires:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/002_horaires_ouverture.sql",
     "db:migrate:horaires:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/002_horaires_ouverture.sql",
     "db:migrate:creneaux-domicile:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/003_creneaux_domicile.sql",
-    "db:migrate:creneaux-domicile:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/003_creneaux_domicile.sql"
+    "db:migrate:creneaux-domicile:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/003_creneaux_domicile.sql",
+    "db:migrate:tva:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/004_tva.sql",
+    "db:migrate:tva:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/004_tva.sql"
   },
   "devDependencies": {
     "wrangler": "^3.90.0"

@@ -8,6 +8,8 @@ export default function Gerant() {
   const [pressing, setPressing] = useState(null)
   const [staff, setStaff] = useState([])
   const [creneauxDomicile, setCreneauxDomicile] = useState([])
+  const [tauxTvaSaisi, setTauxTvaSaisi] = useState('')
+  const [enregistrementTva, setEnregistrementTva] = useState(false)
 
   useEffect(() => {
     if (!pressingId && pressings.length) setPressingId(pressings[0].id)
@@ -15,10 +17,26 @@ export default function Gerant() {
 
   useEffect(() => {
     if (!pressingId) return
-    api.detailPressing(pressingId).then((d) => setPressing(normaliserPressing(d)))
+    api.detailPressing(pressingId).then((d) => {
+      const p = normaliserPressing(d)
+      setPressing(p)
+      setTauxTvaSaisi(String(p.tauxTva))
+    })
     api.listerStaff(pressingId).then(setStaff)
     api.creneauxDomicile(pressingId).then(setCreneauxDomicile)
   }, [pressingId])
+
+  async function enregistrerTauxTva() {
+    const taux = Number(tauxTvaSaisi)
+    if (Number.isNaN(taux) || taux < 0 || taux > 100) return
+    setEnregistrementTva(true)
+    try {
+      await api.definirTauxTva(pressingId, taux)
+      setPressing((p) => ({ ...p, tauxTva: taux }))
+    } finally {
+      setEnregistrementTva(false)
+    }
+  }
 
   if (!pressing) {
     return (
@@ -57,6 +75,34 @@ export default function Gerant() {
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Horaires</span><span>{pressing.heureOuverture}–{pressing.heureFermeture}</span></div>
       </div>
 
+      <h2>TVA</h2>
+      <div className="card">
+        <p className="sous-titre" style={{ marginTop: 0 }}>
+          Taux applicable pour ce pressing (varie selon le pays — ex. 18% au Sénégal). Les prix du
+          catalogue ci-dessus sont considérés TTC ; le HT est déduit automatiquement sur les factures.
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={tauxTvaSaisi}
+            onChange={(e) => setTauxTvaSaisi(e.target.value)}
+            style={{ width: 80 }}
+          />
+          <span>%</span>
+          <button
+            className="primaire"
+            style={{ marginLeft: 'auto', padding: '6px 14px' }}
+            disabled={enregistrementTva || Number(tauxTvaSaisi) === pressing.tauxTva}
+            onClick={enregistrerTauxTva}
+          >
+            {enregistrementTva ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+
       <h2>Règles</h2>
       <div className="card">
         <div className="ligne-entre"><span style={{ color: 'var(--texte-muted)' }}>Acompte</span><span>{pressing.acomptePourcent}% du total</span></div>
@@ -90,8 +136,8 @@ export default function Gerant() {
       ))}
 
       <p className="sous-titre">
-        Écran de démonstration : la modification des soins, tarifs, créneaux et employés n'est
-        pas encore branchée (lecture seule pour l'instant).
+        Écran de démonstration : seul le taux de TVA est modifiable pour l'instant. La modification
+        des soins, tarifs, créneaux et employés n'est pas encore branchée (lecture seule).
       </p>
     </section>
   )

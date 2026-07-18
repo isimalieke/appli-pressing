@@ -9,9 +9,9 @@ INSERT INTO users (id, email, telephone, mot_de_passe_hash, nom, prenom) VALUES
 INSERT INTO clients (id, user_id, adresse_principale) VALUES
   ('c-1', 'u-client1', '12 rue des Lilas');
 
-INSERT INTO pressings (id, proprietaire_id, nom, adresse, rayon_collecte_km, acompte_pourcent, delai_standard_h, delai_express_h, delai_standard_jours_ouvres, delai_express_jours_ouvres, jours_ouverts, heure_ouverture, heure_fermeture, frais_garde_delai_jours, frais_garde_montant_jour) VALUES
-  ('p1', 'u-owner', 'Pressing du Marché', '12 avenue de la République', 3, 30, 48, 24, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.5),
-  ('p2', 'u-owner', 'Clean Express', '5 rue des Lilas', 5, 40, 48, 12, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.3);
+INSERT INTO pressings (id, proprietaire_id, nom, adresse, rayon_collecte_km, acompte_pourcent, delai_standard_h, delai_express_h, delai_standard_jours_ouvres, delai_express_jours_ouvres, jours_ouverts, heure_ouverture, heure_fermeture, frais_garde_delai_jours, frais_garde_montant_jour, taux_tva) VALUES
+  ('p1', 'u-owner', 'Pressing du Marché', '12 avenue de la République', 3, 30, 48, 24, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.5, 18),
+  ('p2', 'u-owner', 'Clean Express', '5 rue des Lilas', 5, 40, 48, 12, 2, 1, '1,2,3,4,5,6', '08:00', '19:00', 30, 0.3, 0);
 
 INSERT INTO pressing_staff (id, pressing_id, user_id, role, poste) VALUES
   ('ps-1', 'p1', 'u-gerant1', 'gerant', NULL);

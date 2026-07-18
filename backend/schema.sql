@@ -38,6 +38,10 @@ CREATE TABLE pressings (
   heure_fermeture TEXT DEFAULT '19:00',
   frais_garde_delai_jours INTEGER DEFAULT 30,
   frais_garde_montant_jour REAL DEFAULT 0,
+  -- Taux de TVA en %, paramétrable par le propriétaire/gérant (varie selon le pays du pressing,
+  -- ex. 18% au Sénégal). 0 par défaut tant qu'il n'est pas renseigné. Les prix du catalogue
+  -- (table tarifs) sont saisis TTC ; le HT est déduit à partir de ce taux.
+  taux_tva REAL NOT NULL DEFAULT 0,
   statut TEXT NOT NULL DEFAULT 'actif',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -124,6 +128,9 @@ CREATE TABLE commandes (
   statut TEXT NOT NULL DEFAULT 'creee'
     CHECK (statut IN ('creee', 'deposee', 'en_traitement', 'prete', 'revisee', 'retiree', 'non_recuperee', 'annulee')),
   prix_total REAL DEFAULT 0,
+  montant_ht REAL DEFAULT 0,
+  montant_tva REAL DEFAULT 0,
+  taux_tva_applique REAL DEFAULT 0,
   montant_acompte REAL DEFAULT 0,
   montant_solde REAL DEFAULT 0,
   date_depot_effectif TEXT,

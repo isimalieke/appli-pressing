@@ -40,10 +40,20 @@ export default function TicketPapier() {
           </div>
         ))}
         <div style={{ borderTop: '1px solid var(--gris-bordure)', marginTop: 10, paddingTop: 10 }} className="ligne-entre">
-          <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>Total</span>
-          <strong>{commande.prixTotal.toFixed(2)} EUR</strong>
+          <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>Total HT</span>
+          <span>{commande.montantHT.toFixed(2)} EUR</span>
         </div>
         <div className="ligne-entre">
+          <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>
+            TVA ({commande.tauxTvaApplique}%)
+          </span>
+          <span>{commande.montantTva.toFixed(2)} EUR</span>
+        </div>
+        <div className="ligne-entre">
+          <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>Total TTC</span>
+          <strong>{commande.prixTotal.toFixed(2)} EUR</strong>
+        </div>
+        <div className="ligne-entre" style={{ marginTop: 6 }}>
           <span style={{ color: 'var(--texte-muted)', fontSize: '0.85rem' }}>Acompte à régler</span>
           <strong>{commande.montantAcompte.toFixed(2)} EUR</strong>
         </div>

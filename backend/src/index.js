@@ -178,6 +178,8 @@ async function definirSoinsArticle(env, articleId, body) {
   return json({ ok: true, prix_article: prixArticle })
 }
 
+// Les prix du catalogue (tarifs) sont saisis TTC par le gérant. `total` ci-dessous est donc le
+// montant TTC de la commande ; le HT et la TVA sont déduits à partir du taux du pressing.
 async function recalculerPrixCommande(env, commandeId) {
   const { results } = await env.DB.prepare(
     `SELECT COALESCE(SUM(art_s.prix_applique), 0) AS total
@@ -185,13 +187,49 @@ async function recalculerPrixCommande(env, commandeId) {
      JOIN articles_commande a ON a.id = art_s.article_commande_id
      WHERE a.commande_id = ?`
   ).bind(commandeId).all()
-  const total = results[0]?.total || 0
+  const totalTTC = results[0]?.total || 0
   const commande = await env.DB.prepare('SELECT pressing_id FROM commandes WHERE id = ?').bind(commandeId).first()
-  const pressing = await env.DB.prepare('SELECT acompte_pourcent FROM pressings WHERE id = ?').bind(commande.pressing_id).first()
-  const acompte = Math.round(total * (pressing.acompte_pourcent / 100) * 100) / 100
+  const pressing = await env.DB.prepare('SELECT acompte_pourcent, taux_tva FROM pressings WHERE id = ?').bind(commande.pressing_id).first()
+
+  const tauxTva = pressing.taux_tva || 0
+  const montantHT = Math.round((totalTTC / (1 + tauxTva / 100)) * 100) / 100
+  const montantTva = Math.round((totalTTC - montantHT) * 100) / 100
+  const acompte = Math.round(totalTTC * (pressing.acompte_pourcent / 100) * 100) / 100
+
   await env.DB.prepare(
-    'UPDATE commandes SET prix_total = ?, montant_acompte = ?, montant_solde = ?, updated_at = datetime(\'now\') WHERE id = ?'
-  ).bind(total, acompte, Math.round((total - acompte) * 100) / 100, commandeId).run()
+    `UPDATE commandes
+     SET prix_total = ?, montant_ht = ?, montant_tva = ?, taux_tva_applique = ?,
+         montant_acompte = ?, montant_solde = ?, updated_at = datetime('now')
+     WHERE id = ?`
+  ).bind(totalTTC, montantHT, montantTva, tauxTva, acompte, Math.round((totalTTC - acompte) * 100) / 100, commandeId).run()
+}
+
+// Permet au propriétaire/gérant de définir le taux de TVA applicable (varie selon le pays
+// du pressing, ex. 18% au Sénégal ; 0% si non assujetti ou pas encore renseigné).
+async function definirTauxTva(env, pressingId, body) {
+  const taux = Number(body.taux_tva)
+  if (Number.isNaN(taux) || taux < 0 || taux > 100) return erreur('taux_tva doit être un nombre entre 0 et 100')
+  await env.DB.prepare('UPDATE pressings SET taux_tva = ? WHERE id = ?').bind(taux, pressingId).run()
+  return json({ ok: true, taux_tva: taux })
+}
+
+// Suppression d'un article ajouté par erreur. Autorisée uniquement avant validation de
+// l'inventaire (commande encore au statut 'creee') : au-delà, l'étiquette a pu être imprimée
+// et agrafée au vêtement, donc la composition de la commande ne doit plus changer côté client.
+async function supprimerArticle(env, articleId) {
+  const article = await env.DB.prepare('SELECT commande_id FROM articles_commande WHERE id = ?').bind(articleId).first()
+  if (!article) return erreur('Article introuvable', 404)
+  const commande = await env.DB.prepare('SELECT statut FROM commandes WHERE id = ?').bind(article.commande_id).first()
+  if (commande.statut !== 'creee') {
+    return erreur('Impossible de supprimer un article après validation de l\'inventaire')
+  }
+
+  await env.DB.prepare('DELETE FROM article_soins WHERE article_commande_id = ?').bind(articleId).run()
+  await env.DB.prepare('DELETE FROM article_photos WHERE article_commande_id = ?').bind(articleId).run()
+  await env.DB.prepare('DELETE FROM articles_commande WHERE id = ?').bind(articleId).run()
+
+  await recalculerPrixCommande(env, article.commande_id)
+  return json({ ok: true })
 }
 
 async function definirReserve(env, articleId, body) {
@@ -376,6 +414,7 @@ export default {
       if (segments[0] === 'pressings' && segments.length === 2 && method === 'GET') return detailPressing(env, segments[1])
       if (segments[0] === 'pressings' && segments[2] === 'staff' && method === 'GET') return listerStaff(env, segments[1])
       if (segments[0] === 'pressings' && segments[2] === 'creneaux-domicile' && method === 'GET') return creneauxDomicileDisponibles(env, segments[1])
+      if (segments[0] === 'pressings' && segments[2] === 'taux-tva' && method === 'PATCH') return definirTauxTva(env, segments[1], await lireJSON(request))
       if (segments[0] === 'pressings' && segments[2] === 'commandes' && method === 'GET') return listerCommandesPressing(env, segments[1])
 
       if (segments[0] === 'clients' && segments[2] === 'commandes' && method === 'GET') return listerCommandesClient(env, segments[1])
@@ -388,6 +427,7 @@ export default {
       if (segments[0] === 'commandes' && segments[2] === 'evaluation' && method === 'PATCH') return noterCommande(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'paiements' && method === 'POST') return enregistrerPaiement(env, segments[1], await lireJSON(request))
 
+      if (segments[0] === 'articles' && segments.length === 2 && method === 'DELETE') return supprimerArticle(env, segments[1])
       if (segments[0] === 'articles' && segments[2] === 'soins' && method === 'PUT') return definirSoinsArticle(env, segments[1], await lireJSON(request))
       if (segments[0] === 'articles' && segments[2] === 'reserve' && method === 'PATCH') return definirReserve(env, segments[1], await lireJSON(request))
       if (segments[0] === 'articles' && segments[2] === 'photos' && method === 'POST') return ajouterPhoto(env, segments[1], await lireJSON(request))

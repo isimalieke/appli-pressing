@@ -37,11 +37,9 @@ export default function Paiement() {
 
   async function payer() {
     await dispatch({ type: 'PAYER', typePaiement: type, montant, moyen })
-    if (type === 'solde') {
-      navigate('/commande/retire')
-    } else {
-      navigate('/commande/suivi')
-    }
+    // Le paiement du solde ne signifie plus que le linge a été remis (les deux sont désormais
+    // indépendants) : on retourne au suivi de commande, pas directement à l'écran "linge récupéré".
+    navigate('/commande/suivi')
   }
 
   return (

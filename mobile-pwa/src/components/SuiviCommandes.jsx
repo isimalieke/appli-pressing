@@ -6,8 +6,10 @@ import { api, normaliserCommande } from '../api.js'
 // "En cours". Réserver un libellé précis aux seuls statuts qui appellent une action ou une
 // information concrète (prête à remettre, retirée, non récupérée, annulée).
 const LIBELLES_STATUT = {
-  prete: 'Prête',
+  prete_retrait: 'Prête (à retirer)',
+  prete_livraison: 'Prête (à livrer)',
   retiree: 'Retirée',
+  livree: 'Livrée',
   non_recuperee: 'Non récupérée',
   annulee: 'Annulée',
 }
@@ -16,10 +18,16 @@ function libelleStatut(statut) {
   return LIBELLES_STATUT[statut] || 'En cours'
 }
 
+function estPrete(statut) {
+  return statut === 'prete_retrait' || statut === 'prete_livraison'
+}
+
 // États considérés comme "clos" : on ne les affiche pas dans le suivi quotidien, pour ne montrer
 // que ce qui est encore actif (le client n'a pas encore récupéré son linge, ou la commande n'est
-// pas annulée).
-const STATUTS_CLOS = ['retiree', 'annulee']
+// pas annulée). 'creee' est également masqué côté personnel : le linge n'est pas encore
+// physiquement arrivé au pressing, il n'y a donc rien à traiter ni à afficher dans cette file.
+const STATUTS_CLOS = ['retiree', 'livree', 'annulee']
+const STATUTS_MASQUES = ['creee']
 
 const FILTRES = [
   { id: 'toutes', libelle: 'Toutes' },
@@ -74,14 +82,14 @@ export default function SuiviCommandes({ pressingId }) {
   const LIBELLES_ETAPE_STATUT = { validee: 'Fait', en_cours: 'En cours', a_faire: 'À faire' }
 
   const enCours = commandes
-    .filter((c) => !STATUTS_CLOS.includes(c.statut))
+    .filter((c) => !STATUTS_CLOS.includes(c.statut) && !STATUTS_MASQUES.includes(c.statut))
     .filter((c) => {
-      if (filtre === 'pretes') return c.statut === 'prete'
-      if (filtre === 'en_cours') return c.statut !== 'prete'
+      if (filtre === 'pretes') return estPrete(c.statut)
+      if (filtre === 'en_cours') return !estPrete(c.statut)
       return true
     })
     // Les commandes prêtes remontent en tête : c'est la file d'attente de remise au client.
-    .sort((a, b) => (a.statut === 'prete') === (b.statut === 'prete') ? 0 : a.statut === 'prete' ? -1 : 1)
+    .sort((a, b) => (estPrete(a.statut) === estPrete(b.statut)) ? 0 : estPrete(a.statut) ? -1 : 1)
 
   // Une fois prêtes, les commandes doivent être triées entre ce qui part en livraison et ce qui
   // attend un retrait au comptoir, pour que le pressing prépare la bonne pile / la bonne tournée
@@ -97,7 +105,7 @@ export default function SuiviCommandes({ pressingId }) {
           <strong style={{ fontSize: '0.85rem' }}>
             {c.client_prenom} {c.client_nom} — #{c.numero_ticket || '—'}
           </strong>
-          <span className={`badge ${c.statut === 'prete' ? 'badge-succes' : 'badge-neutre'}`}>
+          <span className={`badge ${estPrete(c.statut) ? 'badge-succes' : 'badge-neutre'}`}>
             {libelleStatut(c.statut)}
           </span>
         </div>
@@ -105,7 +113,7 @@ export default function SuiviCommandes({ pressingId }) {
           {c.client_telephone && <span>{c.client_telephone} · </span>}
           {c.nb_articles_prets} / {c.nb_articles} article{c.nb_articles > 1 ? 's' : ''} prêt{c.nb_articles_prets > 1 ? 's' : ''}
         </div>
-        {c.statut === 'prete' && (
+        {estPrete(c.statut) && (
           <div
             style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
             onClick={(e) => e.stopPropagation()}

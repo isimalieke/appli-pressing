@@ -1,18 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { formaterMontant } from '../api.js'
 
-const JALONS = [
-  { cle: 'deposee', libelle: 'Déposée et inventoriée' },
-  { cle: 'en_traitement', libelle: 'En traitement' },
-  { cle: 'prete', libelle: 'Prête pour retrait' },
-  { cle: 'retiree', libelle: 'Retirée' },
-]
+// Le mode de remise (comptoir ou domicile) est connu dès la création de la commande : la timeline
+// affiche donc directement le bon dernier jalon ("prête pour retrait" / "retirée" ou "prête, en
+// attente de collecte pour livraison" / "livrée") plutôt qu'un jalon générique.
+function jalons(modeDepot) {
+  const livraison = modeDepot === 'domicile'
+  return [
+    { cle: 'deposee', libelle: 'Déposée et inventoriée' },
+    { cle: 'en_traitement', libelle: 'En traitement' },
+    {
+      cle: livraison ? 'prete_livraison' : 'prete_retrait',
+      libelle: livraison ? 'Prête, en attente de collecte pour livraison' : 'Prête pour retrait',
+    },
+    { cle: livraison ? 'livree' : 'retiree', libelle: livraison ? 'Livrée' : 'Retirée' },
+  ]
+}
 
-function indexStatut(statut) {
+function indexStatut(statut, listeJalons) {
   if (statut === 'revisee') return 2 // traité comme "prête" avec créneau révisé
-  return JALONS.findIndex((j) => j.cle === statut)
+  return listeJalons.findIndex((j) => j.cle === statut)
 }
 
 export default function Suivi() {
@@ -21,6 +30,16 @@ export default function Suivi() {
   const commande = state.commande
   const devise = pressingCourant?.devise
   const [detailOuvert, setDetailOuvert] = useState(false)
+
+  // La remise (comptoir ou domicile) est désormais marquée par le pressing indépendamment du
+  // paiement (bouton "Remis au client") : si le client revient sur cet écran après coup, on
+  // l'emmène directement vers l'écran de fin de commande plutôt que de laisser la timeline
+  // affichée telle quelle.
+  useEffect(() => {
+    if (commande?.statut === 'retiree' || commande?.statut === 'livree') {
+      navigate('/commande/retire')
+    }
+  }, [commande?.statut])
 
   if (!commande || !commande.numeroTicket) {
     return (
@@ -31,7 +50,8 @@ export default function Suivi() {
     )
   }
 
-  const idx = indexStatut(commande.statut)
+  const JALONS = jalons(commande.modeDepot)
+  const idx = indexStatut(commande.statut, JALONS)
 
   return (
     <section>
@@ -81,7 +101,7 @@ export default function Suivi() {
         </div>
       ))}
 
-      {commande.statut === 'prete' && commande.montantSolde > 0 && !commande.paiements.some((p) => p.type === 'solde') && (
+      {(commande.statut === 'prete_retrait' || commande.statut === 'prete_livraison') && commande.montantSolde > 0 && !commande.paiements.some((p) => p.type === 'solde') && (
         <button className="primaire" style={{ marginTop: '1rem' }} onClick={() => navigate('/paiement/solde')}>
           Payer le solde ({formaterMontant(commande.montantSolde, devise)})
         </button>

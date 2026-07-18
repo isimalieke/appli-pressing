@@ -24,7 +24,9 @@
     "db:migrate:civilite:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/008_civilite.sql",
     "db:migrate:civilite:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/008_civilite.sql",
     "db:migrate:moyens-paiement:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/009_moyens_paiement.sql",
-    "db:migrate:moyens-paiement:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/009_moyens_paiement.sql"
+    "db:migrate:moyens-paiement:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/009_moyens_paiement.sql",
+    "db:migrate:statuts-retrait-livraison:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/010_statuts_retrait_livraison.sql",
+    "db:migrate:statuts-retrait-livraison:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/010_statuts_retrait_livraison.sql"
   },
   "devDependencies": {
     "wrangler": "^4.112.0"

@@ -516,33 +516,37 @@ export default {
     const method = request.method
 
     try {
-      if (segments[0] === 'pressings' && segments.length === 1 && method === 'GET') return listerPressings(env)
-      if (segments[0] === 'pressings' && segments.length === 2 && method === 'GET') return detailPressing(env, segments[1])
-      if (segments[0] === 'pressings' && segments[2] === 'staff' && method === 'GET') return listerStaff(env, segments[1])
-      if (segments[0] === 'pressings' && segments[2] === 'creneaux-domicile' && method === 'GET') return creneauxDomicileDisponibles(env, segments[1])
-      if (segments[0] === 'pressings' && segments[2] === 'taux-tva' && method === 'PATCH') return definirTauxTva(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'pressings' && segments[2] === 'prix-kilo' && method === 'PATCH') return definirPrixKilo(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'pressings' && segments[2] === 'devise' && method === 'PATCH') return definirDevise(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'pressings' && segments[2] === 'commandes' && method === 'GET') return listerCommandesPressing(env, segments[1])
+      // Important : chaque route est "await"-ée explicitement. Sans ça, une exception levée
+      // dans un handler async produit une promesse rejetée que "return handler(...)" propage
+      // sans passer par ce catch — Cloudflare renvoie alors une erreur brute sans en-têtes CORS,
+      // que le navigateur bloque avant même d'afficher le vrai message d'erreur.
+      if (segments[0] === 'pressings' && segments.length === 1 && method === 'GET') return await listerPressings(env)
+      if (segments[0] === 'pressings' && segments.length === 2 && method === 'GET') return await detailPressing(env, segments[1])
+      if (segments[0] === 'pressings' && segments[2] === 'staff' && method === 'GET') return await listerStaff(env, segments[1])
+      if (segments[0] === 'pressings' && segments[2] === 'creneaux-domicile' && method === 'GET') return await creneauxDomicileDisponibles(env, segments[1])
+      if (segments[0] === 'pressings' && segments[2] === 'taux-tva' && method === 'PATCH') return await definirTauxTva(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'pressings' && segments[2] === 'prix-kilo' && method === 'PATCH') return await definirPrixKilo(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'pressings' && segments[2] === 'devise' && method === 'PATCH') return await definirDevise(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'pressings' && segments[2] === 'commandes' && method === 'GET') return await listerCommandesPressing(env, segments[1])
 
-      if (segments[0] === 'clients' && segments[2] === 'commandes' && method === 'GET') return listerCommandesClient(env, segments[1])
+      if (segments[0] === 'clients' && segments[2] === 'commandes' && method === 'GET') return await listerCommandesClient(env, segments[1])
 
-      if (segments[0] === 'commandes' && segments.length === 1 && method === 'POST') return creerCommande(env, await lireJSON(request))
-      if (segments[0] === 'commandes' && segments.length === 2 && method === 'GET') return detailCommande(env, segments[1])
-      if (segments[0] === 'commandes' && segments[2] === 'articles' && method === 'POST') return ajouterArticle(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'commandes' && segments[2] === 'poids' && method === 'PATCH') return enregistrerPoidsKilo(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'commandes' && segments[2] === 'creneau-collecte' && method === 'PATCH') return reviserCreneauCollecte(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'commandes' && segments[2] === 'valider-inventaire' && method === 'POST') return validerInventaire(env, segments[1])
-      if (segments[0] === 'commandes' && segments[2] === 'creneau-retrait' && method === 'PATCH') return reviserCreneau(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'commandes' && segments[2] === 'evaluation' && method === 'PATCH') return noterCommande(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'commandes' && segments[2] === 'paiements' && method === 'POST') return enregistrerPaiement(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments.length === 1 && method === 'POST') return await creerCommande(env, await lireJSON(request))
+      if (segments[0] === 'commandes' && segments.length === 2 && method === 'GET') return await detailCommande(env, segments[1])
+      if (segments[0] === 'commandes' && segments[2] === 'articles' && method === 'POST') return await ajouterArticle(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'poids' && method === 'PATCH') return await enregistrerPoidsKilo(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'creneau-collecte' && method === 'PATCH') return await reviserCreneauCollecte(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'valider-inventaire' && method === 'POST') return await validerInventaire(env, segments[1])
+      if (segments[0] === 'commandes' && segments[2] === 'creneau-retrait' && method === 'PATCH') return await reviserCreneau(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'evaluation' && method === 'PATCH') return await noterCommande(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'paiements' && method === 'POST') return await enregistrerPaiement(env, segments[1], await lireJSON(request))
 
-      if (segments[0] === 'articles' && segments.length === 2 && method === 'DELETE') return supprimerArticle(env, segments[1])
-      if (segments[0] === 'articles' && segments[2] === 'soins' && method === 'PUT') return definirSoinsArticle(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'articles' && segments[2] === 'reserve' && method === 'PATCH') return definirReserve(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'articles' && segments[2] === 'photos' && method === 'POST') return ajouterPhoto(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'articles' && segments.length === 2 && method === 'DELETE') return await supprimerArticle(env, segments[1])
+      if (segments[0] === 'articles' && segments[2] === 'soins' && method === 'PUT') return await definirSoinsArticle(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'articles' && segments[2] === 'reserve' && method === 'PATCH') return await definirReserve(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'articles' && segments[2] === 'photos' && method === 'POST') return await ajouterPhoto(env, segments[1], await lireJSON(request))
       if (segments[0] === 'articles' && segments[2] === 'etapes' && segments[4] === 'valider' && method === 'POST') {
-        return validerEtape(env, segments[1], Number(segments[3]), await lireJSON(request))
+        return await validerEtape(env, segments[1], Number(segments[3]), await lireJSON(request))
       }
 
       return erreur('Route inconnue', 404)

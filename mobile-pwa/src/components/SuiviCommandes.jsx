@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
 import { api, normaliserCommande } from '../api.js'
 
+// Le client (et l'employé) n'ont pas besoin de distinguer "créée", "déposée", "en traitement" ou
+// "créneau révisé" : tant que le linge n'est pas prêt, retiré ou annulé, un seul mot suffit —
+// "En cours". Réserver un libellé précis aux seuls statuts qui appellent une action ou une
+// information concrète (prête à remettre, retirée, non récupérée, annulée).
 const LIBELLES_STATUT = {
-  creee: 'Créée',
-  deposee: 'Déposée',
-  en_traitement: 'En traitement',
   prete: 'Prête',
-  revisee: 'Créneau révisé',
   retiree: 'Retirée',
   non_recuperee: 'Non récupérée',
   annulee: 'Annulée',
+}
+
+function libelleStatut(statut) {
+  return LIBELLES_STATUT[statut] || 'En cours'
 }
 
 // États considérés comme "clos" : on ne les affiche pas dans le suivi quotidien, pour ne montrer
@@ -79,6 +83,84 @@ export default function SuiviCommandes({ pressingId }) {
     // Les commandes prêtes remontent en tête : c'est la file d'attente de remise au client.
     .sort((a, b) => (a.statut === 'prete') === (b.statut === 'prete') ? 0 : a.statut === 'prete' ? -1 : 1)
 
+  // Une fois prêtes, les commandes doivent être triées entre ce qui part en livraison et ce qui
+  // attend un retrait au comptoir, pour que le pressing prépare la bonne pile / la bonne tournée
+  // sans avoir à relire chaque badge une par une.
+  const affichageGroupeParModeRemise = filtre === 'pretes'
+  const pretesLivraison = affichageGroupeParModeRemise ? enCours.filter((c) => c.mode_depot === 'domicile') : []
+  const pretesMagasin = affichageGroupeParModeRemise ? enCours.filter((c) => c.mode_depot !== 'domicile') : []
+
+  function carteCommande(c) {
+    return (
+      <div key={c.id} className="card" onClick={() => basculerDetail(c.id)} style={{ cursor: 'pointer' }}>
+        <div className="ligne-entre">
+          <strong style={{ fontSize: '0.85rem' }}>
+            {c.client_prenom} {c.client_nom} — #{c.numero_ticket || '—'}
+          </strong>
+          <span className={`badge ${c.statut === 'prete' ? 'badge-succes' : 'badge-neutre'}`}>
+            {libelleStatut(c.statut)}
+          </span>
+        </div>
+        <div style={{ fontSize: '0.8rem', color: 'var(--texte-muted)', marginTop: 4 }}>
+          {c.client_telephone && <span>{c.client_telephone} · </span>}
+          {c.nb_articles_prets} / {c.nb_articles} article{c.nb_articles > 1 ? 's' : ''} prêt{c.nb_articles_prets > 1 ? 's' : ''}
+        </div>
+        {c.statut === 'prete' && (
+          <div
+            style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {!affichageGroupeParModeRemise && (
+              <span className="badge badge-neutre">
+                <i
+                  className={`ti ${c.mode_depot === 'domicile' ? 'ti-truck' : 'ti-building-store'}`}
+                  aria-hidden="true"
+                  style={{ marginRight: 4 }}
+                ></i>
+                {c.mode_depot === 'domicile' ? 'À livrer à domicile' : 'À retirer en magasin'}
+              </span>
+            )}
+            <button
+              onClick={() => remettreAuClient(c.id)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 8,
+                border: 'none',
+                background: 'var(--vert, #2e7d32)',
+                color: 'white',
+                fontSize: '0.75rem',
+              }}
+            >
+              Remis au client
+            </button>
+          </div>
+        )}
+
+        {commandeOuverte === c.id && (
+          <div style={{ marginTop: 10, borderTop: '1px solid var(--gris-bordure)', paddingTop: 8 }}>
+            {chargementDetail && <p className="sous-titre">Chargement du détail...</p>}
+            {!chargementDetail && detailOuvert && detailOuvert.articles.map((a) => (
+              <div key={a.id} style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.type} — {a.etiquette}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                  {a.etapes.map((e) => (
+                    <span
+                      key={e.ordre}
+                      className={`badge ${e.statut === 'validee' ? 'badge-succes' : 'badge-neutre'}`}
+                      style={{ fontSize: '0.7rem' }}
+                    >
+                      {e.libelle} — {LIBELLES_ETAPE_STATUT[e.statut] || e.statut}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <h2>Suivi des commandes</h2>
@@ -106,72 +188,26 @@ export default function SuiviCommandes({ pressingId }) {
       {!chargement && enCours.length === 0 && (
         <p className="sous-titre">Aucune commande à afficher pour ce filtre.</p>
       )}
-      {enCours.map((c) => (
-        <div key={c.id} className="card" onClick={() => basculerDetail(c.id)} style={{ cursor: 'pointer' }}>
-          <div className="ligne-entre">
-            <strong style={{ fontSize: '0.85rem' }}>
-              {c.client_prenom} {c.client_nom} — #{c.numero_ticket || '—'}
-            </strong>
-            <span className={`badge ${c.statut === 'prete' ? 'badge-succes' : 'badge-neutre'}`}>
-              {LIBELLES_STATUT[c.statut] || c.statut}
-            </span>
-          </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--texte-muted)', marginTop: 4 }}>
-            {c.client_telephone && <span>{c.client_telephone} · </span>}
-            {c.nb_articles_prets} / {c.nb_articles} article{c.nb_articles > 1 ? 's' : ''} prêt{c.nb_articles_prets > 1 ? 's' : ''}
-          </div>
-          {c.statut === 'prete' && (
-            <div
-              style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="badge badge-neutre">
-                <i
-                  className={`ti ${c.mode_depot === 'domicile' ? 'ti-truck' : 'ti-building-store'}`}
-                  aria-hidden="true"
-                  style={{ marginRight: 4 }}
-                ></i>
-                {c.mode_depot === 'domicile' ? 'À livrer à domicile' : 'À retirer en magasin'}
-              </span>
-              <button
-                onClick={() => remettreAuClient(c.id)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'var(--vert, #2e7d32)',
-                  color: 'white',
-                  fontSize: '0.75rem',
-                }}
-              >
-                Remis au client
-              </button>
-            </div>
-          )}
 
-          {commandeOuverte === c.id && (
-            <div style={{ marginTop: 10, borderTop: '1px solid var(--gris-bordure)', paddingTop: 8 }}>
-              {chargementDetail && <p className="sous-titre">Chargement du détail...</p>}
-              {!chargementDetail && detailOuvert && detailOuvert.articles.map((a) => (
-                <div key={a.id} style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.type} — {a.etiquette}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    {a.etapes.map((e) => (
-                      <span
-                        key={e.ordre}
-                        className={`badge ${e.statut === 'validee' ? 'badge-succes' : 'badge-neutre'}`}
-                        style={{ fontSize: '0.7rem' }}
-                      >
-                        {e.libelle} — {LIBELLES_ETAPE_STATUT[e.statut] || e.statut}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+      {!chargement && affichageGroupeParModeRemise ? (
+        <>
+          <h3 style={{ fontSize: '0.85rem', marginTop: 4 }}>
+            <i className="ti ti-truck" aria-hidden="true" style={{ marginRight: 4 }}></i>
+            À livrer à domicile ({pretesLivraison.length})
+          </h3>
+          {pretesLivraison.length === 0 && <p className="sous-titre">Aucune.</p>}
+          {pretesLivraison.map((c) => carteCommande(c))}
+
+          <h3 style={{ fontSize: '0.85rem', marginTop: 14 }}>
+            <i className="ti ti-building-store" aria-hidden="true" style={{ marginRight: 4 }}></i>
+            À retirer en magasin ({pretesMagasin.length})
+          </h3>
+          {pretesMagasin.length === 0 && <p className="sous-titre">Aucune.</p>}
+          {pretesMagasin.map((c) => carteCommande(c))}
+        </>
+      ) : (
+        enCours.map((c) => carteCommande(c))
+      )}
     </div>
   )
 }

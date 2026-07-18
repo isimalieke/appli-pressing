@@ -117,8 +117,11 @@ export default function SuiviCommandes({ pressingId }) {
     .filter((c) => !STATUTS_MASQUES.includes(c.statut))
     .filter((c) => {
       if (filtre === 'terminees') return c.statut === 'terminee'
-      if (filtre === 'a_livrer') return c.statut === 'prete_livraison'
-      if (filtre === 'a_retirer') return c.statut === 'prete_retrait'
+      // "À livrer" / "À retirer" : toutes les commandes actives de ce canal, pas seulement celles
+      // déjà prêtes — la personne qui prépare les livraisons ou tient le comptoir voit ainsi tout
+      // ce qui la concerne, y compris ce qui est encore en traitement et arrivera bientôt.
+      if (filtre === 'a_livrer') return c.mode_depot === 'domicile' && !STATUTS_CLOS.includes(c.statut)
+      if (filtre === 'a_retirer') return c.mode_depot === 'comptoir' && !STATUTS_CLOS.includes(c.statut)
       if (filtre === 'en_cours') return !estPrete(c.statut)
       // "Toutes" : la vue active du jour, sans les commandes déjà terminées ou annulées — celles-ci
       // restent consultables via l'onglet "Terminées".

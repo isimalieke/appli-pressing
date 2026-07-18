@@ -22,6 +22,16 @@ function estPrete(statut) {
   return statut === 'prete_retrait' || statut === 'prete_livraison'
 }
 
+// Pastille livraison/retrait : affichée sur toute commande en traitement (pas seulement les
+// prêtes) pour que le personnel sache dès le premier coup d'œil quel canal préparer. Une fois la
+// commande terminée, le même libellé passe au passé ("Livrée" / "Retirée") pour indiquer comment
+// elle a effectivement été remise.
+function libelleModeRemise(c) {
+  const livraison = c.mode_depot === 'domicile'
+  if (c.statut === 'terminee') return livraison ? 'Livrée' : 'Retirée'
+  return livraison ? 'À livrer à domicile' : 'À retirer en magasin'
+}
+
 // États considérés comme "clos" : masqués par défaut (onglet "Toutes") pour ne montrer que ce qui
 // est encore actif, mais restent consultables via l'onglet dédié "Terminées" — l'employé, le
 // gérant et le propriétaire doivent pouvoir retrouver une commande déjà remise, pas seulement
@@ -136,7 +146,7 @@ export default function SuiviCommandes({ pressingId }) {
           {c.client_telephone && <span>{c.client_telephone} · </span>}
           {c.nb_articles_prets} / {c.nb_articles} article{c.nb_articles > 1 ? 's' : ''} prêt{c.nb_articles_prets > 1 ? 's' : ''}
         </div>
-        {estPrete(c.statut) && (
+        {!STATUTS_MASQUES.includes(c.statut) && c.statut !== 'annulee' && (
           <div
             style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
             onClick={(e) => e.stopPropagation()}
@@ -148,22 +158,24 @@ export default function SuiviCommandes({ pressingId }) {
                   aria-hidden="true"
                   style={{ marginRight: 4 }}
                 ></i>
-                {c.mode_depot === 'domicile' ? 'À livrer à domicile' : 'À retirer en magasin'}
+                {libelleModeRemise(c)}
               </span>
             )}
-            <button
-              onClick={() => remettreAuClient(c.id)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 8,
-                border: 'none',
-                background: 'var(--vert, #2e7d32)',
-                color: 'white',
-                fontSize: '0.75rem',
-              }}
-            >
-              Remis au client
-            </button>
+            {estPrete(c.statut) && (
+              <button
+                onClick={() => remettreAuClient(c.id)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'var(--vert, #2e7d32)',
+                  color: 'white',
+                  fontSize: '0.75rem',
+                }}
+              >
+                Remis au client
+              </button>
+            )}
           </div>
         )}
 

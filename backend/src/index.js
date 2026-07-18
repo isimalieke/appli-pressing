@@ -429,7 +429,9 @@ async function validerInventaire(env, commandeId) {
       'SELECT soin_id FROM article_soins WHERE article_commande_id = ?'
     ).bind(article.id).all()
 
-    const rangPhase = { reception: 0, lavage: 1, nettoyage: 1, repassage: 2, controle: 3 }
+    // Le détachage (pré-traitement des taches) se fait avant le lavage ou le nettoyage à sec, pas
+    // après : d'où une phase à part, classée juste après la réception.
+    const rangPhase = { reception: 0, detachage: 1, lavage: 2, nettoyage: 2, repassage: 3, controle: 4 }
     const etapesFusionnees = []
     const etapesVues = new Set()
     for (const { soin_id } of soinsArticle) {
@@ -443,7 +445,7 @@ async function validerInventaire(env, commandeId) {
         for (const { libelle, poste_associe } of etapes) {
           if (etapesVues.has(libelle)) continue
           etapesVues.add(libelle)
-          etapesFusionnees.push({ libelle, rang: rangPhase[poste_associe] ?? 4 })
+          etapesFusionnees.push({ libelle, rang: rangPhase[poste_associe] ?? 5 })
         }
       }
     }

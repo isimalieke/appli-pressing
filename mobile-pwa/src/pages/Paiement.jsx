@@ -4,6 +4,16 @@ import { useApp } from '../context/AppContext.jsx'
 import { moyensPaiement } from '../data/mock.js'
 import { formaterMontant } from '../api.js'
 
+// Numéro marchand configuré par moyen de paiement (cf. Gérant > Moyens de paiement). Le QR encode
+// un texte lisible (pas un lien de paiement officiel Wave/OM — on n'a pas d'accès API à ce stade),
+// pour que le client puisse au moins scanner le numéro sans risque de faute de frappe, puis
+// effectuer lui-même le virement depuis son appli. La confirmation reste manuelle.
+function numeroMarchand(moyen, pressingCourant) {
+  if (moyen === 'wave') return pressingCourant?.numeroMarchandWave || ''
+  if (moyen === 'orange_money') return pressingCourant?.numeroMarchandOm || ''
+  return ''
+}
+
 export default function Paiement() {
   const { type } = useParams() // 'acompte' ou 'solde'
   const { state, dispatch, pressingCourant } = useApp()
@@ -22,6 +32,8 @@ export default function Paiement() {
   }
 
   const montant = type === 'solde' ? commande.montantSolde : commande.montantAcompte
+  const numero = numeroMarchand(moyen, pressingCourant)
+  const affichageQr = (moyen === 'wave' || moyen === 'orange_money') && numero
 
   async function payer() {
     await dispatch({ type: 'PAYER', typePaiement: type, montant, moyen })
@@ -66,10 +78,35 @@ export default function Paiement() {
         </label>
       ))}
 
+      {affichageQr && (
+        <div className="card" style={{ textAlign: 'center' }}>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+              `${moyen === 'wave' ? 'Wave' : 'Orange Money'} ${pressingCourant?.nom || ''} - ${numero} - ${formaterMontant(montant, devise)}`
+            )}`}
+            alt={`QR code de paiement ${moyen === 'wave' ? 'Wave' : 'Orange Money'}`}
+            width={180}
+            height={180}
+            style={{ margin: '0 auto 8px' }}
+          />
+          <p style={{ fontSize: '0.85rem', margin: 0 }}>Numéro marchand : {numero}</p>
+          <p className="sous-titre" style={{ marginTop: 4 }}>
+            Scannez ou composez ce numéro dans votre application {moyen === 'wave' ? 'Wave' : 'Orange Money'} pour
+            envoyer {formaterMontant(montant, devise)}, puis confirmez ci-dessous.
+          </p>
+        </div>
+      )}
+
+      {(moyen === 'wave' || moyen === 'orange_money') && !numero && (
+        <p className="sous-titre">
+          Ce pressing n'a pas encore renseigné son numéro marchand {moyen === 'wave' ? 'Wave' : 'Orange Money'}.
+        </p>
+      )}
+
       <p className="sous-titre">Confirmation envoyée par WhatsApp et SMS, même sans l'application.</p>
 
       <button className="primaire" onClick={payer}>
-        Payer {formaterMontant(montant, devise)}
+        {affichageQr ? "J'ai effectué le paiement" : `Payer ${formaterMontant(montant, devise)}`}
       </button>
     </section>
   )

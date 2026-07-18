@@ -348,6 +348,18 @@ async function definirDevise(env, pressingId, body) {
   return json({ ok: true, devise })
 }
 
+// Numéros marchands Wave / Orange Money, utilisés pour générer un QR code de paiement côté
+// client. Pas de vérification de format stricte (les numéros marchands ne suivent pas tous le
+// même format selon le pays) — un champ vide désactive simplement le QR pour ce moyen.
+async function definirMoyensPaiement(env, pressingId, body) {
+  const numeroWave = body.numero_marchand_wave != null ? String(body.numero_marchand_wave).trim() : null
+  const numeroOm = body.numero_marchand_om != null ? String(body.numero_marchand_om).trim() : null
+  await env.DB.prepare(
+    'UPDATE pressings SET numero_marchand_wave = ?, numero_marchand_om = ? WHERE id = ?'
+  ).bind(numeroWave || null, numeroOm || null, pressingId).run()
+  return json({ ok: true, numero_marchand_wave: numeroWave, numero_marchand_om: numeroOm })
+}
+
 // Suppression d'un article ajouté par erreur. Autorisée uniquement avant validation de
 // l'inventaire (commande encore au statut 'creee') : au-delà, l'étiquette a pu être imprimée
 // et agrafée au vêtement, donc la composition de la commande ne doit plus changer côté client.
@@ -597,6 +609,7 @@ export default {
       if (segments[0] === 'pressings' && segments[2] === 'taux-tva' && method === 'PATCH') return await definirTauxTva(env, segments[1], await lireJSON(request))
       if (segments[0] === 'pressings' && segments[2] === 'prix-kilo' && method === 'PATCH') return await definirPrixKilo(env, segments[1], await lireJSON(request))
       if (segments[0] === 'pressings' && segments[2] === 'devise' && method === 'PATCH') return await definirDevise(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'pressings' && segments[2] === 'moyens-paiement' && method === 'PATCH') return await definirMoyensPaiement(env, segments[1], await lireJSON(request))
       if (segments[0] === 'pressings' && segments[2] === 'commandes' && method === 'GET') return await listerCommandesPressing(env, segments[1])
       if (segments[0] === 'pressings' && segments[2] === 'connexion-staff' && method === 'POST') return await connexionStaff(env, segments[1], await lireJSON(request))
 

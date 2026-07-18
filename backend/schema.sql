@@ -50,6 +50,10 @@ CREATE TABLE pressings (
   -- Devise d'affichage des montants (code ISO 4217, ex. XOF pour le Sénégal, EUR). Le propriétaire
   -- peut avoir des pressings dans des pays différents, donc paramétrable par pressing.
   devise TEXT NOT NULL DEFAULT 'XOF',
+  -- Numéros marchands pour générer un QR code de paiement au client. Pas d'API de confirmation
+  -- automatique à ce stade : le paiement reste confirmé manuellement (cf. enregistrerPaiement).
+  numero_marchand_wave TEXT,
+  numero_marchand_om TEXT,
   statut TEXT NOT NULL DEFAULT 'actif',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

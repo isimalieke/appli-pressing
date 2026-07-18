@@ -29,6 +29,11 @@ export const api = {
     appel(`/pressings/${pressingId}/prix-kilo`, { method: 'PATCH', body: JSON.stringify({ prix_kilo: prixKilo }) }),
   definirDevise: (pressingId, devise) =>
     appel(`/pressings/${pressingId}/devise`, { method: 'PATCH', body: JSON.stringify({ devise }) }),
+  definirMoyensPaiement: (pressingId, numeroWave, numeroOm) =>
+    appel(`/pressings/${pressingId}/moyens-paiement`, {
+      method: 'PATCH',
+      body: JSON.stringify({ numero_marchand_wave: numeroWave, numero_marchand_om: numeroOm }),
+    }),
 
   creerCommande: (payload) => appel('/commandes', { method: 'POST', body: JSON.stringify(payload) }),
   detailCommande: (id) => appel(`/commandes/${id}`),
@@ -147,6 +152,8 @@ export function normaliserPressing(p) {
     tauxTva: p.taux_tva || 0,
     prixKilo: p.prix_kilo || 0,
     devise: p.devise || 'XOF',
+    numeroMarchandWave: p.numero_marchand_wave || '',
+    numeroMarchandOm: p.numero_marchand_om || '',
     delaiStandardH: p.delai_standard_h,
     delaiExpressH: p.delai_express_h,
     delaiStandardJoursOuvres: p.delai_standard_jours_ouvres ?? 2,

@@ -15,6 +15,9 @@ export default function Gerant() {
   const [enregistrementKilo, setEnregistrementKilo] = useState(false)
   const [deviseSaisie, setDeviseSaisie] = useState('')
   const [enregistrementDevise, setEnregistrementDevise] = useState(false)
+  const [numeroWaveSaisi, setNumeroWaveSaisi] = useState('')
+  const [numeroOmSaisi, setNumeroOmSaisi] = useState('')
+  const [enregistrementMoyensPaiement, setEnregistrementMoyensPaiement] = useState(false)
 
   useEffect(() => {
     if (!pressingId && pressings.length) setPressingId(pressings[0].id)
@@ -28,6 +31,8 @@ export default function Gerant() {
       setTauxTvaSaisi(String(p.tauxTva))
       setPrixKiloSaisi(String(p.prixKilo))
       setDeviseSaisie(p.devise)
+      setNumeroWaveSaisi(p.numeroMarchandWave)
+      setNumeroOmSaisi(p.numeroMarchandOm)
     })
     api.listerStaff(pressingId).then(setStaff)
     api.creneauxDomicile(pressingId).then(setCreneauxDomicile)
@@ -66,6 +71,16 @@ export default function Gerant() {
       setPressing((p) => ({ ...p, devise }))
     } finally {
       setEnregistrementDevise(false)
+    }
+  }
+
+  async function enregistrerMoyensPaiement() {
+    setEnregistrementMoyensPaiement(true)
+    try {
+      await api.definirMoyensPaiement(pressingId, numeroWaveSaisi.trim(), numeroOmSaisi.trim())
+      setPressing((p) => ({ ...p, numeroMarchandWave: numeroWaveSaisi.trim(), numeroMarchandOm: numeroOmSaisi.trim() }))
+    } finally {
+      setEnregistrementMoyensPaiement(false)
     }
   }
 
@@ -191,6 +206,42 @@ export default function Gerant() {
             {enregistrementTva ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         </div>
+      </div>
+
+      <h2>Moyens de paiement</h2>
+      <div className="card">
+        <p className="sous-titre" style={{ marginTop: 0 }}>
+          Numéros marchands Wave et Orange Money du pressing, utilisés pour générer un QR code au
+          moment du paiement. Le paiement reste confirmé manuellement — pas de reconnaissance
+          automatique du virement à ce stade.
+        </p>
+        <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: 6 }}>Numéro marchand Wave</label>
+        <input
+          type="text"
+          placeholder="+221 77 000 00 00"
+          value={numeroWaveSaisi}
+          onChange={(e) => setNumeroWaveSaisi(e.target.value)}
+          style={{ width: '100%', marginBottom: 12 }}
+        />
+        <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: 6 }}>Numéro marchand Orange Money</label>
+        <input
+          type="text"
+          placeholder="+221 77 000 00 00"
+          value={numeroOmSaisi}
+          onChange={(e) => setNumeroOmSaisi(e.target.value)}
+          style={{ width: '100%', marginBottom: 12 }}
+        />
+        <button
+          className="primaire"
+          style={{ padding: '6px 14px' }}
+          disabled={
+            enregistrementMoyensPaiement ||
+            (numeroWaveSaisi === pressing.numeroMarchandWave && numeroOmSaisi === pressing.numeroMarchandOm)
+          }
+          onClick={enregistrerMoyensPaiement}
+        >
+          {enregistrementMoyensPaiement ? 'Enregistrement...' : 'Enregistrer'}
+        </button>
       </div>
 
       <h2>Règles</h2>

@@ -22,7 +22,9 @@
     "db:migrate:staff-pin:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/007_staff_pin.sql",
     "db:migrate:staff-pin:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/007_staff_pin.sql",
     "db:migrate:civilite:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/008_civilite.sql",
-    "db:migrate:civilite:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/008_civilite.sql"
+    "db:migrate:civilite:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/008_civilite.sql",
+    "db:migrate:moyens-paiement:local": "wrangler d1 execute appli-pressing-db --local --file=./migrations/009_moyens_paiement.sql",
+    "db:migrate:moyens-paiement:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/009_moyens_paiement.sql"
   },
   "devDependencies": {
     "wrangler": "^4.112.0"

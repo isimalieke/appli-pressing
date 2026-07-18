@@ -29,10 +29,15 @@ function estPrete(statut) {
 const STATUTS_CLOS = ['retiree', 'livree', 'annulee']
 const STATUTS_MASQUES = ['creee']
 
+// Filtres dédiés "À livrer" / "À retirer" plutôt qu'un seul onglet "Prêtes" mélangeant les deux :
+// la personne qui prépare les tournées de livraison ne doit voir que sa liste, sans avoir à
+// ignorer les commandes qui attendent un simple retrait au comptoir, et inversement pour la
+// personne au comptoir.
 const FILTRES = [
   { id: 'toutes', libelle: 'Toutes' },
-  { id: 'pretes', libelle: 'Prêtes' },
   { id: 'en_cours', libelle: 'En traitement' },
+  { id: 'a_livrer', libelle: 'À livrer' },
+  { id: 'a_retirer', libelle: 'À retirer' },
 ]
 
 // Vue simple, partagée entre Employé, Gérant et Propriétaire : une ligne par commande en cours,
@@ -84,19 +89,17 @@ export default function SuiviCommandes({ pressingId }) {
   const enCours = commandes
     .filter((c) => !STATUTS_CLOS.includes(c.statut) && !STATUTS_MASQUES.includes(c.statut))
     .filter((c) => {
-      if (filtre === 'pretes') return estPrete(c.statut)
+      if (filtre === 'a_livrer') return c.statut === 'prete_livraison'
+      if (filtre === 'a_retirer') return c.statut === 'prete_retrait'
       if (filtre === 'en_cours') return !estPrete(c.statut)
       return true
     })
     // Les commandes prêtes remontent en tête : c'est la file d'attente de remise au client.
     .sort((a, b) => (estPrete(a.statut) === estPrete(b.statut)) ? 0 : estPrete(a.statut) ? -1 : 1)
 
-  // Une fois prêtes, les commandes doivent être triées entre ce qui part en livraison et ce qui
-  // attend un retrait au comptoir, pour que le pressing prépare la bonne pile / la bonne tournée
-  // sans avoir à relire chaque badge une par une.
-  const affichageGroupeParModeRemise = filtre === 'pretes'
-  const pretesLivraison = affichageGroupeParModeRemise ? enCours.filter((c) => c.mode_depot === 'domicile') : []
-  const pretesMagasin = affichageGroupeParModeRemise ? enCours.filter((c) => c.mode_depot !== 'domicile') : []
+  // Sur les filtres dédiés, le mode de remise est déjà donné par l'onglet choisi : le badge
+  // livraison/magasin sur chaque carte devient redondant et n'est utile que sur "Toutes".
+  const filtreDejaExplicite = filtre === 'a_livrer' || filtre === 'a_retirer'
 
   function carteCommande(c) {
     return (
@@ -118,7 +121,7 @@ export default function SuiviCommandes({ pressingId }) {
             style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
             onClick={(e) => e.stopPropagation()}
           >
-            {!affichageGroupeParModeRemise && (
+            {!filtreDejaExplicite && (
               <span className="badge badge-neutre">
                 <i
                   className={`ti ${c.mode_depot === 'domicile' ? 'ti-truck' : 'ti-building-store'}`}
@@ -197,25 +200,7 @@ export default function SuiviCommandes({ pressingId }) {
         <p className="sous-titre">Aucune commande à afficher pour ce filtre.</p>
       )}
 
-      {!chargement && affichageGroupeParModeRemise ? (
-        <>
-          <h3 style={{ fontSize: '0.85rem', marginTop: 4 }}>
-            <i className="ti ti-truck" aria-hidden="true" style={{ marginRight: 4 }}></i>
-            À livrer à domicile ({pretesLivraison.length})
-          </h3>
-          {pretesLivraison.length === 0 && <p className="sous-titre">Aucune.</p>}
-          {pretesLivraison.map((c) => carteCommande(c))}
-
-          <h3 style={{ fontSize: '0.85rem', marginTop: 14 }}>
-            <i className="ti ti-building-store" aria-hidden="true" style={{ marginRight: 4 }}></i>
-            À retirer en magasin ({pretesMagasin.length})
-          </h3>
-          {pretesMagasin.length === 0 && <p className="sous-titre">Aucune.</p>}
-          {pretesMagasin.map((c) => carteCommande(c))}
-        </>
-      ) : (
-        enCours.map((c) => carteCommande(c))
-      )}
+      {!chargement && enCours.map((c) => carteCommande(c))}
     </div>
   )
 }

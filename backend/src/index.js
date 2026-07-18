@@ -587,6 +587,18 @@ async function enregistrerPaiement(env, commandeId, body) {
   return json({ id }, 201)
 }
 
+// Marque la commande comme physiquement remise au client (retrait en magasin ou livraison
+// effectuée), indépendamment du paiement — un client peut avoir payé sans que son linge ait
+// encore quitté le pressing, ou l'inverse (paiement en espèces hors app). Seule une commande
+// prête peut être marquée remise.
+async function marquerRemise(env, commandeId) {
+  const commande = await env.DB.prepare('SELECT statut FROM commandes WHERE id = ?').bind(commandeId).first()
+  if (!commande) return erreur('Commande introuvable', 404)
+  if (commande.statut !== 'prete') return erreur('Seule une commande prête peut être marquée comme remise')
+  await env.DB.prepare(`UPDATE commandes SET statut = 'retiree', updated_at = datetime('now') WHERE id = ?`).bind(commandeId).run()
+  return json({ ok: true })
+}
+
 // --- Routeur -----------------------------------------------------------------
 
 export default {
@@ -623,6 +635,7 @@ export default {
       if (segments[0] === 'commandes' && segments[2] === 'creneau-collecte' && method === 'PATCH') return await reviserCreneauCollecte(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'valider-inventaire' && method === 'POST') return await validerInventaire(env, segments[1])
       if (segments[0] === 'commandes' && segments[2] === 'creneau-retrait' && method === 'PATCH') return await reviserCreneau(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'remise' && method === 'PATCH') return await marquerRemise(env, segments[1])
       if (segments[0] === 'commandes' && segments[2] === 'evaluation' && method === 'PATCH') return await noterCommande(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'paiements' && method === 'POST') return await enregistrerPaiement(env, segments[1], await lireJSON(request))
 

@@ -57,6 +57,7 @@ export const api = {
     appel(`/commandes/${commandeId}/creneau-collecte`, { method: 'PATCH', body: JSON.stringify({ creneau_collecte_prevue: creneauCollectePrevue }) }),
   enregistrerPaiement: (commandeId, payload) =>
     appel(`/commandes/${commandeId}/paiements`, { method: 'POST', body: JSON.stringify(payload) }),
+  marquerRemise: (commandeId) => appel(`/commandes/${commandeId}/remise`, { method: 'PATCH' }),
   noterCommande: (commandeId, note) =>
     appel(`/commandes/${commandeId}/evaluation`, { method: 'PATCH', body: JSON.stringify({ note }) }),
   listerCommandesClient: (clientId) => appel(`/clients/${clientId}/commandes`),

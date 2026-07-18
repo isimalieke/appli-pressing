@@ -526,22 +526,38 @@ async function listerCommandesPressing(env, pressingId) {
   return json(results)
 }
 
-async function validerEtape(env, articleId, ordre, body) {
+// Bascule librement une étape entre "faite" et "à faire", sans imposer l'ordre du circuit : le
+// personnel voit toutes les étapes d'un article en même temps (détachage, lavage, repassage...) et
+// clique directement celle qu'il vient de terminer, quelle qu'elle soit. Un second clic annule une
+// validation faite par erreur. C'est plus rapide que l'ancien flux séquentiel (une seule étape
+// "active" à la fois) et fonctionne depuis n'importe quel écran de suivi, pas seulement la fiche de
+// la commande en cours de traitement.
+async function basculerEtape(env, articleId, ordre, body) {
   const etape = await env.DB.prepare(
     'SELECT * FROM article_etapes WHERE article_commande_id = ? AND ordre = ?'
   ).bind(articleId, ordre).first()
   if (!etape) return erreur('Étape introuvable', 404)
 
-  await env.DB.prepare(
-    `UPDATE article_etapes SET statut = 'validee', valide_par = ?, horodatage = datetime('now') WHERE id = ?`
-  ).bind(body.staff_id || null, etape.id).run()
+  const nouveauStatutEtape = etape.statut === 'validee' ? 'a_faire' : 'validee'
+  if (nouveauStatutEtape === 'validee') {
+    await env.DB.prepare(
+      `UPDATE article_etapes SET statut = 'validee', valide_par = ?, horodatage = datetime('now') WHERE id = ?`
+    ).bind(body.staff_id || null, etape.id).run()
+  } else {
+    await env.DB.prepare(
+      `UPDATE article_etapes SET statut = 'a_faire', valide_par = NULL, horodatage = NULL WHERE id = ?`
+    ).bind(etape.id).run()
+  }
 
-  await env.DB.prepare(
-    `UPDATE article_etapes SET statut = 'en_cours' WHERE article_commande_id = ? AND ordre = ? AND statut = 'a_faire'`
-  ).bind(articleId, ordre + 1).run()
-
-  // Recalcule le statut agrégé de la commande (§5.2 du cahier des charges)
+  // Recalcule le statut agrégé de la commande (§5.2 du cahier des charges), sauf si la commande a
+  // déjà été remise au client ou annulée : corriger une étape après coup ne doit pas faire revenir
+  // une commande terminée en arrière dans le circuit de traitement.
   const article = await env.DB.prepare('SELECT commande_id FROM articles_commande WHERE id = ?').bind(articleId).first()
+  const commandeActuelle = await env.DB.prepare('SELECT statut, mode_depot FROM commandes WHERE id = ?').bind(article.commande_id).first()
+  if (commandeActuelle.statut === 'terminee' || commandeActuelle.statut === 'annulee') {
+    return json({ ok: true, statut_etape: nouveauStatutEtape, statut_commande: commandeActuelle.statut })
+  }
+
   const { results: tousArticles } = await env.DB.prepare(
     'SELECT id FROM articles_commande WHERE commande_id = ?'
   ).bind(article.commande_id).all()
@@ -558,14 +574,13 @@ async function validerEtape(env, articleId, ordre, body) {
     // Le mode de remise est connu dès la création de la commande (mode_depot) — pas besoin d'un
     // statut "prête" générique suivi d'un second statut : on va directement à la bonne file
     // d'attente (comptoir ou livraison).
-    const { mode_depot } = await env.DB.prepare('SELECT mode_depot FROM commandes WHERE id = ?').bind(article.commande_id).first()
-    nouveauStatut = mode_depot === 'domicile' ? 'prete_livraison' : 'prete_retrait'
+    nouveauStatut = commandeActuelle.mode_depot === 'domicile' ? 'prete_livraison' : 'prete_retrait'
   } else {
     nouveauStatut = auMoinsUneValidee ? 'en_traitement' : 'deposee'
   }
   await env.DB.prepare(`UPDATE commandes SET statut = ?, updated_at = datetime('now') WHERE id = ?`).bind(nouveauStatut, article.commande_id).run()
 
-  return json({ ok: true, statut_commande: nouveauStatut })
+  return json({ ok: true, statut_etape: nouveauStatutEtape, statut_commande: nouveauStatut })
 }
 
 async function noterCommande(env, commandeId, body) {
@@ -655,8 +670,8 @@ export default {
       if (segments[0] === 'articles' && segments[2] === 'soins' && method === 'PUT') return await definirSoinsArticle(env, segments[1], await lireJSON(request))
       if (segments[0] === 'articles' && segments[2] === 'reserve' && method === 'PATCH') return await definirReserve(env, segments[1], await lireJSON(request))
       if (segments[0] === 'articles' && segments[2] === 'photos' && method === 'POST') return await ajouterPhoto(env, segments[1], await lireJSON(request))
-      if (segments[0] === 'articles' && segments[2] === 'etapes' && segments[4] === 'valider' && method === 'POST') {
-        return await validerEtape(env, segments[1], Number(segments[3]), await lireJSON(request))
+      if (segments[0] === 'articles' && segments[2] === 'etapes' && segments[4] === 'basculer' && method === 'POST') {
+        return await basculerEtape(env, segments[1], Number(segments[3]), await lireJSON(request))
       }
 
       return erreur('Route inconnue', 404)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api, normaliserPressing, formaterCreneau } from '../api.js'
 import SuiviCommandes from '../components/SuiviCommandes.jsx'
+import EtapesArticle from '../components/EtapesArticle.jsx'
 
 // Deux écrans distincts, accessibles par onglet : "Commande en cours" pour traiter le lot que
 // l'employé a en main (validation étape par étape), et "Toutes les commandes" pour la vue
@@ -14,10 +15,9 @@ export default function Employe() {
   const [onglet, setOnglet] = useState('traitement')
   const [creneauChoisi, setCreneauChoisi] = useState(null)
   const [pressing, setPressing] = useState(null)
-  // Mémorise l'article en cours de validation pour donner un retour visuel immédiat (bouton vert)
-  // le temps de l'appel réseau, sinon rien ne signale que le clic a bien été pris en compte avant
-  // que l'étape suivante ne s'affiche.
-  const [validationEnCours, setValidationEnCours] = useState(null)
+  // Mémorise l'étape en cours de bascule (articleId + ordre) pour désactiver brièvement ce bouton
+  // précis le temps de l'appel réseau, sans bloquer les autres.
+  const [etapeEnCours, setEtapeEnCours] = useState(null)
 
   const pressingId = commande?.pressingId || state.staffSession?.pressingId
 
@@ -30,12 +30,12 @@ export default function Employe() {
   // "staff_id" doit correspondre à une vraie ligne de pressing_staff (contrainte de clé
   // étrangère), sinon le serveur rejette l'appel. Tant que l'authentification employé n'est pas
   // branchée, on ne transmet aucun staff_id (NULL est accepté).
-  async function valider(articleId, etape) {
-    setValidationEnCours(articleId)
+  async function basculer(articleId, ordre) {
+    setEtapeEnCours({ articleId, ordre })
     try {
-      await dispatch({ type: 'VALIDER_ETAPE', articleId, etapeIndex: etape.ordre })
+      await dispatch({ type: 'BASCULER_ETAPE', articleId, etapeIndex: ordre })
     } finally {
-      setValidationEnCours(null)
+      setEtapeEnCours(null)
     }
   }
 
@@ -114,41 +114,18 @@ export default function Employe() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {commande.articles.map((a) => {
-                const etape = a.etapes.find((e) => e.statut === 'en_cours')
                 const termine = a.etapes.length > 0 && a.etapes.every((e) => e.statut === 'validee')
-                const enCoursDeValidation = validationEnCours === a.id
                 return (
                   <div key={a.id} className="card">
                     <div className="ligne-entre">
                       <strong style={{ fontSize: '0.85rem' }}>{a.type} — {a.etiquette}</strong>
                       {termine && <span className="badge badge-succes">Prêt</span>}
                     </div>
-                    {!termine && etape && (
-                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <div style={{ fontSize: '0.95rem' }}>{etape.libelle}</div>
-                        <button
-                          onClick={() => valider(a.id, etape)}
-                          disabled={enCoursDeValidation}
-                          aria-label={`Valider ${etape.libelle}`}
-                          style={{
-                            flexShrink: 0,
-                            width: 44,
-                            height: 44,
-                            borderRadius: 8,
-                            border: 'none',
-                            background: enCoursDeValidation ? 'var(--vert, #2e7d32)' : 'var(--gris-carte-fonce, #1e293b)',
-                            color: 'white',
-                            fontSize: '1.2rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'background 0.15s ease',
-                          }}
-                        >
-                          <i className="ti ti-check" aria-hidden="true"></i>
-                        </button>
-                      </div>
-                    )}
+                    <EtapesArticle
+                      article={a}
+                      onToggle={(ordre) => basculer(a.id, ordre)}
+                      ordreEnCours={etapeEnCours?.articleId === a.id ? etapeEnCours.ordre : null}
+                    />
                   </div>
                 )
               })}

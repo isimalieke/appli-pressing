@@ -207,11 +207,11 @@ export function AppProvider({ children }) {
         })
       }
 
-      case 'VALIDER_ETAPE': {
+      case 'BASCULER_ETAPE': {
         return actionAvecChargement(async () => {
-          await api.validerEtape(action.articleId, action.etapeIndex, action.employe)
+          await api.basculerEtape(action.articleId, action.etapeIndex, action.employe)
           await rafraichirCommande(commande.id)
-          // Pas de notification WhatsApp à chaque étape validée : c'est une donnée de suivi
+          // Pas de notification WhatsApp à chaque étape basculée : c'est une donnée de suivi
           // interne au pressing, le client n'a pas besoin d'être averti à chaque poste franchi.
         })
       }

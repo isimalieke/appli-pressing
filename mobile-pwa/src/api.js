@@ -49,8 +49,8 @@ export const api = {
   ajouterPhoto: (articleId, url) =>
     appel(`/articles/${articleId}/photos`, { method: 'POST', body: JSON.stringify({ url }) }),
   validerInventaire: (commandeId) => appel(`/commandes/${commandeId}/valider-inventaire`, { method: 'POST' }),
-  validerEtape: (articleId, ordre, staffId) =>
-    appel(`/articles/${articleId}/etapes/${ordre}/valider`, { method: 'POST', body: JSON.stringify({ staff_id: staffId || null }) }),
+  basculerEtape: (articleId, ordre, staffId) =>
+    appel(`/articles/${articleId}/etapes/${ordre}/basculer`, { method: 'POST', body: JSON.stringify({ staff_id: staffId || null }) }),
   reviserCreneau: (commandeId, creneau) =>
     appel(`/commandes/${commandeId}/creneau-retrait`, { method: 'PATCH', body: JSON.stringify({ creneau }) }),
   reviserCreneauCollecte: (commandeId, creneauCollectePrevue) =>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, normaliserCommande } from '../api.js'
+import EtapesArticle from './EtapesArticle.jsx'
 
 // Le client (et l'employé) n'ont pas besoin de distinguer "créée", "déposée", "en traitement" ou
 // "créneau révisé" : tant que le linge n'est pas prêt, retiré ou annulé, un seul mot suffit —
@@ -56,6 +57,7 @@ export default function SuiviCommandes({ pressingId }) {
   const [commandeOuverte, setCommandeOuverte] = useState(null)
   const [detailOuvert, setDetailOuvert] = useState(null)
   const [chargementDetail, setChargementDetail] = useState(false)
+  const [etapeEnCours, setEtapeEnCours] = useState(null)
 
   useEffect(() => {
     if (!pressingId) return
@@ -85,7 +87,21 @@ export default function SuiviCommandes({ pressingId }) {
     setChargementDetail(false)
   }
 
-  const LIBELLES_ETAPE_STATUT = { validee: 'Fait', en_cours: 'En cours', a_faire: 'À faire' }
+  // Bascule une étape directement depuis le suivi global, sans passer par l'onglet "Commande en
+  // cours" : l'employé, le gérant ou le propriétaire peuvent avancer n'importe quelle commande
+  // depuis n'importe quel filtre (Toutes, À livrer, À retirer...). Rafraîchit à la fois le détail
+  // déplié et la liste (le statut agrégé et le compteur d'articles prêts peuvent changer).
+  async function basculerEtape(commandeId, articleId, ordre) {
+    setEtapeEnCours({ articleId, ordre })
+    try {
+      await api.basculerEtape(articleId, ordre)
+      const [d, fraiches] = await Promise.all([api.detailCommande(commandeId), api.listerCommandesPressing(pressingId)])
+      setDetailOuvert(normaliserCommande(d))
+      setCommandes(fraiches)
+    } finally {
+      setEtapeEnCours(null)
+    }
+  }
 
   const enCours = commandes
     .filter((c) => !STATUTS_MASQUES.includes(c.statut))
@@ -152,22 +168,19 @@ export default function SuiviCommandes({ pressingId }) {
         )}
 
         {commandeOuverte === c.id && (
-          <div style={{ marginTop: 10, borderTop: '1px solid var(--gris-bordure)', paddingTop: 8 }}>
+          <div
+            style={{ marginTop: 10, borderTop: '1px solid var(--gris-bordure)', paddingTop: 8 }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {chargementDetail && <p className="sous-titre">Chargement du détail...</p>}
             {!chargementDetail && detailOuvert && detailOuvert.articles.map((a) => (
-              <div key={a.id} style={{ marginBottom: 8 }}>
+              <div key={a.id} style={{ marginBottom: 10 }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.type} — {a.etiquette}</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                  {a.etapes.map((e) => (
-                    <span
-                      key={e.ordre}
-                      className={`badge ${e.statut === 'validee' ? 'badge-succes' : 'badge-neutre'}`}
-                      style={{ fontSize: '0.7rem' }}
-                    >
-                      {e.libelle} — {LIBELLES_ETAPE_STATUT[e.statut] || e.statut}
-                    </span>
-                  ))}
-                </div>
+                <EtapesArticle
+                  article={a}
+                  onToggle={(ordre) => basculerEtape(c.id, a.id, ordre)}
+                  ordreEnCours={etapeEnCours?.articleId === a.id ? etapeEnCours.ordre : null}
+                />
               </div>
             ))}
           </div>

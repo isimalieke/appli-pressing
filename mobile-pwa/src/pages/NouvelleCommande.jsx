@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
-import { api, formaterCreneauDomicile, formaterJoursOuverts } from '../api.js'
+import { api, formaterJourCourt, formaterJoursOuverts } from '../api.js'
 
 export default function NouvelleCommande() {
   const { pressingCourant, dispatch } = useApp()
@@ -11,12 +11,19 @@ export default function NouvelleCommande() {
   const [creneauLabel, setCreneauLabel] = useState(null)
   const [creneauxDisponibles, setCreneauxDisponibles] = useState([])
   const [chargementCreneaux, setChargementCreneaux] = useState(false)
+  const [jourSelectionne, setJourSelectionne] = useState(null)
 
   useEffect(() => {
     if (mode === 'domicile' && pressingCourant) {
       setChargementCreneaux(true)
       api.creneauxDomicile(pressingCourant.id)
-        .then(setCreneauxDisponibles)
+        .then((creneaux) => {
+          // On ne propose au client que les créneaux réellement disponibles — le nombre de
+          // places restantes n'a pas d'intérêt pour lui, seulement le fait de pouvoir réserver.
+          const disponibles = creneaux.filter((c) => c.disponible)
+          setCreneauxDisponibles(disponibles)
+          setJourSelectionne(disponibles[0]?.date || null)
+        })
         .finally(() => setChargementCreneaux(false))
     }
   }, [mode, pressingCourant])
@@ -122,38 +129,50 @@ export default function NouvelleCommande() {
         </div>
       ) : (
         <>
-          <h2>Créneaux de collecte disponibles (7 prochains jours)</h2>
+          <h2>Créneau de collecte</h2>
           {chargementCreneaux && <p className="sous-titre">Chargement des créneaux...</p>}
           {!chargementCreneaux && creneauxDisponibles.length === 0 && (
-            <p className="sous-titre">Aucun créneau de collecte à domicile n'est disponible pour ce pressing.</p>
+            <p className="sous-titre">Aucun créneau de collecte à domicile n'est disponible pour le moment.</p>
           )}
-          {Object.entries(creneauxParJour).map(([date, creneauxJour]) => (
-            <div key={date} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--texte-muted)', marginBottom: 4, textTransform: 'capitalize' }}>
-                {formaterCreneauDomicile(creneauxJour[0]).split(',')[0]}
+
+          {!chargementCreneaux && creneauxDisponibles.length > 0 && (
+            <>
+              {/* Sélecteur de jour façon calendrier : une bande horizontale de jours, puis les
+                  créneaux horaires du seul jour sélectionné (moins de défilement, plus lisible). */}
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 10 }}>
+                {Object.keys(creneauxParJour).map((date) => (
+                  <button
+                    key={date}
+                    onClick={() => setJourSelectionne(date)}
+                    style={{
+                      flex: '0 0 auto',
+                      padding: '8px 14px',
+                      borderRadius: 20,
+                      border: jourSelectionne === date ? 'none' : '1px solid var(--gris-bordure)',
+                      background: jourSelectionne === date ? 'var(--bleu)' : 'var(--gris-carte)',
+                      color: jourSelectionne === date ? 'white' : 'var(--texte)',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    {formaterJourCourt(date)}
+                  </button>
+                ))}
               </div>
+
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {creneauxJour.map((c) => (
+                {(creneauxParJour[jourSelectionne] || []).map((c) => (
                   <div
                     key={c.label}
                     className={`card card-selectionnable ${creneauLabel === c.label ? 'actif' : ''}`}
-                    style={{
-                      flex: '1 1 auto',
-                      opacity: c.disponible ? 1 : 0.4,
-                      cursor: c.disponible ? 'pointer' : 'not-allowed',
-                      padding: '8px 10px',
-                    }}
-                    onClick={() => c.disponible && setCreneauLabel(c.label)}
+                    style={{ flex: '1 1 auto', padding: '10px 14px', textAlign: 'center' }}
+                    onClick={() => setCreneauLabel(c.label)}
                   >
-                    <div style={{ fontSize: '0.8rem' }}>{c.heure_debut}–{c.heure_fin}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--texte-muted)' }}>
-                      {c.disponible ? `${c.places_restantes} place${c.places_restantes > 1 ? 's' : ''}` : 'Complet'}
-                    </div>
+                    <div style={{ fontSize: '0.85rem' }}>{c.heure_debut}–{c.heure_fin}</div>
                   </div>
                 ))}
               </div>
-            </div>
-          ))}
+            </>
+          )}
         </>
       )}
 

@@ -92,6 +92,13 @@ export function AppProvider({ children }) {
         })
       }
 
+      case 'REVISER_CRENEAU_COLLECTE': {
+        return actionAvecChargement(async () => {
+          await api.reviserCreneauCollecte(commande.id, action.creneauCollectePrevue)
+          await rafraichirCommande(commande.id)
+        })
+      }
+
       case 'TOGGLE_SOIN': {
         return actionAvecChargement(async () => {
           const article = commande.articles.find((a) => a.id === action.articleId)

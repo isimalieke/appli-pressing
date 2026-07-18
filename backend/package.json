@@ -21,6 +21,6 @@
     "db:migrate:devise:remote": "wrangler d1 execute appli-pressing-db --remote --file=./migrations/006_devise.sql"
   },
   "devDependencies": {
-    "wrangler": "^3.90.0"
+    "wrangler": "^4.112.0"
   }
 }

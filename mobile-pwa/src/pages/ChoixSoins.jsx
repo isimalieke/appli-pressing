@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { typesArticle } from '../data/mock.js'
 import { formaterMontant } from '../api.js'
+import CreneauCollecte from '../components/CreneauCollecte.jsx'
 
 export default function ChoixSoins() {
   const { state, dispatch, pressingCourant } = useApp()
@@ -36,6 +37,8 @@ export default function ChoixSoins() {
     <section>
       <h1>{pressingCourant.nom}</h1>
       <p className="sous-titre">Ajoutez vos articles et choisissez les soins souhaités.</p>
+
+      <CreneauCollecte />
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1rem' }}>
         {typesArticle.map((t) => (

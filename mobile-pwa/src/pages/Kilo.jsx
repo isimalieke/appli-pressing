@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import { formaterMontant } from '../api.js'
+import CreneauCollecte from '../components/CreneauCollecte.jsx'
 
 export default function Kilo() {
   const { state, dispatch, pressingCourant } = useApp()
@@ -32,6 +33,8 @@ export default function Kilo() {
     <section>
       <h1>{pressingCourant.nom}</h1>
       <p className="sous-titre">Linge en vrac — pesez le lot et validez, une seule étiquette sera générée pour l'ensemble.</p>
+
+      <CreneauCollecte />
 
       <div className="card">
         <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: 6 }}>Poids du linge (kg)</label>

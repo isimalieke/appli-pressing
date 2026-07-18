@@ -48,6 +48,8 @@ export const api = {
     appel(`/articles/${articleId}/etapes/${ordre}/valider`, { method: 'POST', body: JSON.stringify({ staff_id: staffId || null }) }),
   reviserCreneau: (commandeId, creneau) =>
     appel(`/commandes/${commandeId}/creneau-retrait`, { method: 'PATCH', body: JSON.stringify({ creneau }) }),
+  reviserCreneauCollecte: (commandeId, creneauCollectePrevue) =>
+    appel(`/commandes/${commandeId}/creneau-collecte`, { method: 'PATCH', body: JSON.stringify({ creneau_collecte_prevue: creneauCollectePrevue }) }),
   enregistrerPaiement: (commandeId, payload) =>
     appel(`/commandes/${commandeId}/paiements`, { method: 'POST', body: JSON.stringify(payload) }),
   noterCommande: (commandeId, note) =>
@@ -188,6 +190,20 @@ const NOMS_JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 've
 
 // Formate un créneau de collecte à domicile généré dynamiquement (date ISO + heures) en libellé
 // lisible : "aujourd'hui", "demain", ou "vendredi 20 juillet".
+const NOMS_JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
+
+// Libellé court pour une puce de sélection de jour dans un sélecteur type calendrier
+// ("aujourd'hui", "demain", ou "ven 20").
+export function formaterJourCourt(dateStr) {
+  const aujourdhui = new Date()
+  const debutAujourdhui = new Date(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate())
+  const date = new Date(`${dateStr}T00:00:00`)
+  const diffJours = Math.round((date - debutAujourdhui) / 86400000)
+  if (diffJours === 0) return "Aujourd'hui"
+  if (diffJours === 1) return 'Demain'
+  return `${NOMS_JOURS_COURTS[date.getDay()]} ${date.getDate()}`
+}
+
 export function formaterCreneauDomicile(c) {
   if (!c) return ''
   const aujourdhui = new Date()

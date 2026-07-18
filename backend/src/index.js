@@ -194,6 +194,40 @@ async function creneauxDomicileDisponibles(env, pressingId) {
   return json(creneaux)
 }
 
+// Permet au client de changer son créneau de collecte à domicile après confirmation (erreur de
+// saisie, ou créneau devenu indisponible entre-temps). Autorisé uniquement avant la collecte
+// effective (commande encore au statut 'creee' — dès que le linge est physiquement récupéré et
+// l'inventaire validé, le créneau de collecte n'a plus de sens à modifier).
+async function reviserCreneauCollecte(env, commandeId, body) {
+  const nouveauLabel = body.creneau_collecte_prevue
+  if (!nouveauLabel) return erreur('creneau_collecte_prevue requis')
+
+  const commande = await env.DB.prepare('SELECT * FROM commandes WHERE id = ?').bind(commandeId).first()
+  if (!commande) return erreur('Commande introuvable', 404)
+  if (commande.mode_depot !== 'domicile') return erreur('Cette commande n\'est pas en collecte à domicile')
+  if (commande.statut !== 'creee') return erreur('Le créneau de collecte ne peut plus être modifié après la collecte')
+
+  // Vérifie que le nouveau créneau correspond bien à un bloc du gabarit et qu'il a de la place.
+  const [dateStr, plage] = nouveauLabel.split(' ')
+  const [heureDebut] = (plage || '').split('-')
+  const dateSlot = new Date(`${dateStr}T00:00:00Z`)
+  const jourIso = dateSlot.getUTCDay() === 0 ? 7 : dateSlot.getUTCDay()
+  const bloc = await env.DB.prepare(
+    'SELECT * FROM gabarit_creneaux_domicile WHERE pressing_id = ? AND jour_semaine = ? AND heure_debut = ?'
+  ).bind(commande.pressing_id, jourIso, heureDebut).first()
+  if (!bloc) return erreur('Créneau invalide')
+
+  const { count } = await env.DB.prepare(
+    'SELECT COUNT(*) AS count FROM commandes WHERE pressing_id = ? AND creneau_collecte_prevue = ? AND id != ?'
+  ).bind(commande.pressing_id, nouveauLabel, commandeId).first()
+  if (count >= bloc.capacite_max) return erreur('Ce créneau est complet, choisissez-en un autre')
+
+  await env.DB.prepare(
+    `UPDATE commandes SET creneau_collecte_prevue = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(nouveauLabel, commandeId).run()
+  return json({ ok: true, creneau_collecte_prevue: nouveauLabel })
+}
+
 async function ajouterArticle(env, commandeId, body) {
   const { type_article, description } = body
   if (!type_article) return erreur('type_article requis')
@@ -497,6 +531,7 @@ export default {
       if (segments[0] === 'commandes' && segments.length === 2 && method === 'GET') return detailCommande(env, segments[1])
       if (segments[0] === 'commandes' && segments[2] === 'articles' && method === 'POST') return ajouterArticle(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'poids' && method === 'PATCH') return enregistrerPoidsKilo(env, segments[1], await lireJSON(request))
+      if (segments[0] === 'commandes' && segments[2] === 'creneau-collecte' && method === 'PATCH') return reviserCreneauCollecte(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'valider-inventaire' && method === 'POST') return validerInventaire(env, segments[1])
       if (segments[0] === 'commandes' && segments[2] === 'creneau-retrait' && method === 'PATCH') return reviserCreneau(env, segments[1], await lireJSON(request))
       if (segments[0] === 'commandes' && segments[2] === 'evaluation' && method === 'PATCH') return noterCommande(env, segments[1], await lireJSON(request))

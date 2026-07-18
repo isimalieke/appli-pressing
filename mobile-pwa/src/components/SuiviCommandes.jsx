@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, normaliserCommande } from '../api.js'
 
 const LIBELLES_STATUT = {
   creee: 'Créée',
@@ -33,6 +33,11 @@ export default function SuiviCommandes({ pressingId }) {
   const [commandes, setCommandes] = useState([])
   const [chargement, setChargement] = useState(false)
   const [filtre, setFiltre] = useState('toutes')
+  // Détail par article/étape chargé à la demande, uniquement pour la commande dépliée — évite de
+  // récupérer le détail complet de toutes les commandes juste pour afficher la liste.
+  const [commandeOuverte, setCommandeOuverte] = useState(null)
+  const [detailOuvert, setDetailOuvert] = useState(null)
+  const [chargementDetail, setChargementDetail] = useState(false)
 
   useEffect(() => {
     if (!pressingId) return
@@ -47,6 +52,22 @@ export default function SuiviCommandes({ pressingId }) {
     const fraiches = await api.listerCommandesPressing(pressingId)
     setCommandes(fraiches)
   }
+
+  async function basculerDetail(commandeId) {
+    if (commandeOuverte === commandeId) {
+      setCommandeOuverte(null)
+      setDetailOuvert(null)
+      return
+    }
+    setCommandeOuverte(commandeId)
+    setDetailOuvert(null)
+    setChargementDetail(true)
+    const d = await api.detailCommande(commandeId)
+    setDetailOuvert(normaliserCommande(d))
+    setChargementDetail(false)
+  }
+
+  const LIBELLES_ETAPE_STATUT = { validee: 'Fait', en_cours: 'En cours', a_faire: 'À faire' }
 
   const enCours = commandes
     .filter((c) => !STATUTS_CLOS.includes(c.statut))
@@ -86,7 +107,7 @@ export default function SuiviCommandes({ pressingId }) {
         <p className="sous-titre">Aucune commande à afficher pour ce filtre.</p>
       )}
       {enCours.map((c) => (
-        <div key={c.id} className="card">
+        <div key={c.id} className="card" onClick={() => basculerDetail(c.id)} style={{ cursor: 'pointer' }}>
           <div className="ligne-entre">
             <strong style={{ fontSize: '0.85rem' }}>
               {c.client_prenom} {c.client_nom} — #{c.numero_ticket || '—'}
@@ -100,7 +121,10 @@ export default function SuiviCommandes({ pressingId }) {
             {c.nb_articles_prets} / {c.nb_articles} article{c.nb_articles > 1 ? 's' : ''} prêt{c.nb_articles_prets > 1 ? 's' : ''}
           </div>
           {c.statut === 'prete' && (
-            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div
+              style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <span className="badge badge-neutre">
                 <i
                   className={`ti ${c.mode_depot === 'domicile' ? 'ti-truck' : 'ti-building-store'}`}
@@ -122,6 +146,28 @@ export default function SuiviCommandes({ pressingId }) {
               >
                 Remis au client
               </button>
+            </div>
+          )}
+
+          {commandeOuverte === c.id && (
+            <div style={{ marginTop: 10, borderTop: '1px solid var(--gris-bordure)', paddingTop: 8 }}>
+              {chargementDetail && <p className="sous-titre">Chargement du détail...</p>}
+              {!chargementDetail && detailOuvert && detailOuvert.articles.map((a) => (
+                <div key={a.id} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.type} — {a.etiquette}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {a.etapes.map((e) => (
+                      <span
+                        key={e.ordre}
+                        className={`badge ${e.statut === 'validee' ? 'badge-succes' : 'badge-neutre'}`}
+                        style={{ fontSize: '0.7rem' }}
+                      >
+                        {e.libelle} — {LIBELLES_ETAPE_STATUT[e.statut] || e.statut}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -75,14 +75,26 @@ export default function Employe() {
                 {termine && <span className="badge badge-succes">Prêt</span>}
               </div>
               {!termine && etape && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: '0.95rem', marginBottom: 8 }}>{etape.libelle}</div>
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ fontSize: '0.95rem' }}>{etape.libelle}</div>
                   <button
-                    className="primaire"
-                    style={{ width: '100%', padding: '10px', fontSize: '0.85rem' }}
                     onClick={() => valider(a.id, etape)}
+                    aria-label={`Valider ${etape.libelle}`}
+                    style={{
+                      flexShrink: 0,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 8,
+                      border: 'none',
+                      background: 'var(--gris-carte-fonce, #1e293b)',
+                      color: 'white',
+                      fontSize: '1.2rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
-                    Valider
+                    <i className="ti ti-check" aria-hidden="true"></i>
                   </button>
                 </div>
               )}
